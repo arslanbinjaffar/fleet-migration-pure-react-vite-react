@@ -4,10 +4,12 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import PublicRoute from '@/components/auth/PublicRoute';
 import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
+import MainLayout from '@/layouts/MainLayout';
 
 const AppRoutes: React.FC = () => {
   return (
     <Routes>
+      <Route element={<MainLayout />}>
       {/* Public Routes - Redirect to dashboard if authenticated */}
       <Route 
         path="/login" 
@@ -70,6 +72,8 @@ const AppRoutes: React.FC = () => {
       
       {/* Catch all route - redirect to login */}
       <Route path="*" element={<Navigate to="/login" replace />} />
+      </Route>
+
     </Routes>
   );
 };
