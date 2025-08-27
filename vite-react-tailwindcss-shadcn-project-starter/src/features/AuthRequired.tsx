@@ -14,14 +14,30 @@ interface AuthRequiredProps {
   allowedRoles?: string[];
 }
 
+interface Permission {
+  module: string;
+  name: string;
+  actions: string[];
+}
+
 interface UserRole {
   roleName: string;
-  permissions: string[];
+  permissions: Permission[];
 }
 
 interface AuthUser {
   Role?: UserRole;
+  email?: string;
+  name?: string;
   [key: string]: any;
+}
+
+interface MenuItem {
+  title: string;
+  to?: string;
+  module?: string;
+  content?: MenuItem[];
+  iconStyle?: React.ReactNode;
 }
 
 const capitalizeFirstLetter = (string: string): string => {
@@ -77,56 +93,71 @@ const AuthRequired: React.FC<AuthRequiredProps> = ({ allowedRoles }) => {
     setActiveModule(moduleTitle);
   };
 
-  // Only redirect on initial load if the current path is invalid
+  // Handle role-based navigation and menu validation
   useEffect(() => {
     if (isInitializing || !token || !user || !isMenuListReady) return;
 
+    // Check role permissions
     if (allowedRoles && !allowedRoles.includes(userRoleName)) {
       navigate("/page-error-403", { state: { from: location }, replace: true });
       return;
     }
 
-    // Check if current path is valid
-    const role = location.pathname.split("/")[1] || "administrative";
-    console.log(location.pathname, "pathname");
+    // Extract role from current path or default to user's role
+    const currentRole = location.pathname.split("/")[1] || userRoleName.toLowerCase();
+    const expectedRole = userRoleName.toLowerCase();
     
+    // Validate if user is accessing correct role path
+    if (currentRole !== expectedRole && currentRole !== "page-error-403") {
+      // Redirect to user's correct role path
+      const targetPath = location.pathname.replace(`/${currentRole}`, `/${expectedRole}`);
+      navigate(targetPath, { replace: true });
+      return;
+    }
+
+    // Check if current path is valid within user's menu permissions
     const isValidPath = menuList.some((menuGroup) => {
-      // Handle special routes
+      // Handle special dynamic routes
       if (
-        location.pathname.startsWith(`/${role}/schedule/edit`) ||
-        location.pathname.startsWith(`/${role}/invoice/create`) ||
-        location.pathname.startsWith(`/${role}/add-payment/supplier/create/fleet`) ||
-        location.pathname.startsWith(`/${role}/add-payment/supplier/create`)
+        location.pathname.startsWith(`/${expectedRole}/schedule/edit`) ||
+        location.pathname.startsWith(`/${expectedRole}/invoice/create`) ||
+        location.pathname.startsWith(`/${expectedRole}/add-payment/supplier/create/fleet`) ||
+        location.pathname.startsWith(`/${expectedRole}/add-payment/supplier/create`) ||
+        location.pathname === `/${expectedRole}/welcome`
       ) {
         return true;
       }
       
+      // Check menu items with sub-content
       if (menuGroup.content?.length) {
         return menuGroup.content.some(
-          (item) => item.to && location.pathname.startsWith(`/${role}/${item.to}`)
+          (item) => item.to && location.pathname.startsWith(`/${expectedRole}/${item.to}`)
         );
       }
-      return menuGroup.to && location.pathname === `/${role}/${menuGroup.to}`;
+      
+      // Check direct menu items
+      return menuGroup.to && location.pathname.startsWith(`/${expectedRole}/${menuGroup.to}`);
     });
     
-    // Redirect only if the current path is invalid
+    // Redirect to first available menu item if current path is invalid
     if (!isValidPath) {
       for (const menuGroup of menuList || []) {
         if (menuGroup.content?.length) {
           const firstChild = menuGroup.content.find((item) => item.to);
           if (firstChild) {
             handleNavigation(menuGroup.title);
-            navigate(`/${role}/${firstChild.to}`, { replace: true });
+            navigate(`/${expectedRole}/${firstChild.to}`, { replace: true });
             return;
           }
         }
         if (menuGroup.to) {
           handleNavigation(menuGroup.title);
-          navigate(`/${role}/${menuGroup.to}`, { replace: true });
+          navigate(`/${expectedRole}/${menuGroup.to}`, { replace: true });
           return;
         }
       }
-      navigate(`/${role}/welcome`, { replace: true });
+      // Fallback to welcome page
+      navigate(`/${expectedRole}/welcome`, { replace: true });
     }
   }, [
     isInitializing,
@@ -137,7 +168,7 @@ const AuthRequired: React.FC<AuthRequiredProps> = ({ allowedRoles }) => {
     userRoleName,
     navigate,
     menuList,
-    location,
+    location.pathname,
     handleNavigation,
   ]);
 

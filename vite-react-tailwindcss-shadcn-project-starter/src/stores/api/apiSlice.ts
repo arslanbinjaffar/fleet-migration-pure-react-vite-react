@@ -8,13 +8,18 @@ export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({
     baseUrl,
-    prepareHeaders: (headers, { getState }) => {
+    prepareHeaders: (headers, { getState, endpoint, type, extraOptions }) => {
       // Add auth token if available
       const token = (getState() as any).user?.token;
       if (token) {
-        headers.set('authorization', `Bearer ${token}`);
+        headers.set('authorization', `${token}`);
       }
-      headers.set('content-type', 'application/json');
+      
+      // Don't set content-type for FormData (let browser set it with boundary)
+      if (!(extraOptions as any)?.formData) {
+        headers.set('content-type', 'application/json');
+      }
+      
       return headers;
     },
   }),

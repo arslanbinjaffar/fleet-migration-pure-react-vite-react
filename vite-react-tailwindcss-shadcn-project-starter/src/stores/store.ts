@@ -3,6 +3,8 @@ import { setupListeners } from '@reduxjs/toolkit/query';
 import { apiSlice } from './api/apiSlice';
 import userReducer from './slices/userSlice';
 import authReducer from './slices/authSlice';
+import fleetReducer from './slices/fleetSlice';
+import { persistenceMiddleware } from './middleware/persistenceMiddleware';
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +12,7 @@ export const store = configureStore({
     api: apiSlice.reducer,
     user: userReducer,
     auth: authReducer,
+    fleet: fleetReducer,
   },
   // Adding the api middleware enables caching, invalidation, polling,
   // and other useful features of `rtk-query`.
@@ -18,7 +21,9 @@ export const store = configureStore({
       serializableCheck: {
         ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
       },
-    }).concat(apiSlice.middleware),
+    })
+    .concat(apiSlice.middleware)
+    .concat(persistenceMiddleware),
 });
 
 // optional, but required for refetchOnFocus/refetchOnReconnect behaviors

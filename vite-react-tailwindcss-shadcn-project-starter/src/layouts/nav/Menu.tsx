@@ -34,6 +34,7 @@ import { ReactElement } from "react";
 interface Permission {
   module: string;
   name: string;
+  actions: string[];
 }
 
 interface MenuChild {

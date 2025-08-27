@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { Outlet } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { selectCurrentUser } from "../stores/slices/authSlice";
@@ -6,12 +6,19 @@ import { useMenuList } from "./nav/Menu";
 import Header from "./nav/Header";
 import Sidebar from "./nav/SideBar";
 import MobileNav from "./nav/MobileNav";
+import { ThemeContext } from "../contexts/ThemeContext";
 import { cn } from "../lib/utils";
 
 // Types
+interface Permission {
+  module: string;
+  name: string;
+  actions: string[];
+}
+
 interface UserRole {
   roleName: string;
-  permissions: string[];
+  permissions: Permission[];
 }
 
 interface AuthUser {
@@ -26,8 +33,27 @@ const MainLayout: React.FC = () => {
   const [selectedModule, setSelectedModule] = useState<string>("");
   const [headerFixed, setHeaderFixed] = useState(false);
   
+  // Theme context integration
+  const { sidebariconHover } = useContext(ThemeContext) || { sidebariconHover: false };
+  
   const user = useSelector(selectCurrentUser) as AuthUser | null;
-  const userPermissions = user?.Role?.permissions || [];
+  
+  // Get user permissions with proper error handling
+  const getUserPermissions = (): Permission[] => {
+    try {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        return parsedUser?.Role?.permissions || [];
+      }
+      return user?.Role?.permissions || [];
+    } catch (error) {
+      console.error("Error parsing user permissions:", error);
+      return user?.Role?.permissions || [];
+    }
+  };
+  
+  const userPermissions = getUserPermissions();
   const menuList = useMenuList(userPermissions);
 
   // Initialize selectedModule with the first module (enhanced functionality requirement)
@@ -45,7 +71,7 @@ const MainLayout: React.FC = () => {
         }
       }
     }
-  }, [menuList]);
+  }, []);
 
   // Handle scroll for header fixed state (enhanced functionality)
   useEffect(() => {
@@ -67,7 +93,15 @@ const MainLayout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div
+      id="main-wrapper"
+      className={cn(
+        "min-h-screen bg-background transition-all duration-300",
+        "show",
+        sidebariconHover ? "iconhover-toggle" : "",
+        sidebarOpen ? "" : "menu-toggle"
+      )}
+    >
       {/* Mobile Navigation - Only visible on mobile */}
       <div className="md:hidden">
         <MobileNav />
@@ -82,7 +116,7 @@ const MainLayout: React.FC = () => {
         {/* Sidebar */}
         <div
           className={cn(
-            "transition-all duration-300 ease-in-out flex-shrink-0",
+            "transition-all duration-300 ease-in-out flex-shrink-0 border-r border-border",
             sidebarOpen ? "w-64" : "w-16"
           )}
         >
@@ -98,7 +132,7 @@ const MainLayout: React.FC = () => {
           {/* Header */}
           <div
             className={cn(
-              "transition-all duration-300",
+              "transition-all duration-300 border-b border-border bg-card",
               headerFixed ? "fixed top-0 right-0 z-40 shadow-lg" : "relative",
               headerFixed && sidebarOpen ? "left-64" : headerFixed && !sidebarOpen ? "left-16" : ""
             )}
@@ -116,10 +150,10 @@ const MainLayout: React.FC = () => {
             />
           </div>
 
-          {/* Content */}
+          {/* Content Body */}
           <main
             className={cn(
-              "flex-1 transition-all duration-300",
+              "content-body flex-1 transition-all duration-300 bg-background",
               headerFixed ? "pt-16" : ""
             )}
           >
@@ -127,6 +161,11 @@ const MainLayout: React.FC = () => {
               <Outlet />
             </div>
           </main>
+
+          {/* Footer */}
+          <footer className="border-t border-border bg-card p-4 text-center text-sm text-muted-foreground">
+            <p>&copy; {new Date().getFullYear()} Fleet Management System. All rights reserved.</p>
+          </footer>
         </div>
       </div>
 

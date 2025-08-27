@@ -60,6 +60,37 @@
     --login-shadow: var(--color-shadow);
     --form-border: var(--color-border);
     --form-focus: var(--color-primary);
+    
+    /* Fleet Management specific colors */
+    --fleet-primary: var(--color-primary);
+    --fleet-secondary: var(--color-secondary);
+    --fleet-accent: var(--color-accent);
+    --fleet-card-bg: var(--color-card);
+    --fleet-card-border: var(--color-border);
+    --fleet-status-active: #10b981;
+    --fleet-status-inactive: #6b7280;
+    --fleet-status-maintenance: #f59e0b;
+    --fleet-attachment-bg: rgba(22, 163, 74, 0.05);
+    --fleet-attachment-border: rgba(22, 163, 74, 0.2);
+    --fleet-sticker-bg: rgba(15, 118, 110, 0.05);
+    --fleet-sticker-border: rgba(15, 118, 110, 0.2);
+    --fleet-form-section-bg: rgba(139, 92, 246, 0.03);
+    --fleet-form-section-border: rgba(139, 92, 246, 0.1);
+    --fleet-hover-bg: rgba(22, 163, 74, 0.1);
+    --fleet-selected-bg: rgba(22, 163, 74, 0.15);
+    --fleet-grid-border: var(--color-border);
+    --fleet-table-header-bg: rgba(22, 163, 74, 0.05);
+    --fleet-pagination-bg: var(--color-card);
+    --fleet-filter-bg: rgba(15, 118, 110, 0.05);
+    --fleet-export-bg: rgba(139, 92, 246, 0.05);
+    --fleet-danger-bg: rgba(239, 68, 68, 0.05);
+    --fleet-danger-border: rgba(239, 68, 68, 0.2);
+    --fleet-success-bg: rgba(16, 185, 129, 0.05);
+    --fleet-success-border: rgba(16, 185, 129, 0.2);
+    --fleet-warning-bg: rgba(245, 158, 11, 0.05);
+    --fleet-warning-border: rgba(245, 158, 11, 0.2);
+    --fleet-info-bg: rgba(59, 130, 246, 0.05);
+    --fleet-info-border: rgba(59, 130, 246, 0.2);
   }
   .dark {
     --background: 240 10% 3.9%;
@@ -118,6 +149,37 @@
     --login-shadow: var(--color-shadow);
     --form-border: var(--color-border);
     --form-focus: var(--color-primary);
+    
+    /* Fleet Management specific colors for dark mode */
+    --fleet-primary: var(--color-primary);
+    --fleet-secondary: var(--color-secondary);
+    --fleet-accent: var(--color-accent);
+    --fleet-card-bg: var(--color-card);
+    --fleet-card-border: var(--color-border);
+    --fleet-status-active: #34d399;
+    --fleet-status-inactive: #9ca3af;
+    --fleet-status-maintenance: #fbbf24;
+    --fleet-attachment-bg: rgba(34, 197, 94, 0.1);
+    --fleet-attachment-border: rgba(34, 197, 94, 0.3);
+    --fleet-sticker-bg: rgba(20, 184, 166, 0.1);
+    --fleet-sticker-border: rgba(20, 184, 166, 0.3);
+    --fleet-form-section-bg: rgba(167, 139, 250, 0.05);
+    --fleet-form-section-border: rgba(167, 139, 250, 0.15);
+    --fleet-hover-bg: rgba(34, 197, 94, 0.15);
+    --fleet-selected-bg: rgba(34, 197, 94, 0.2);
+    --fleet-grid-border: var(--color-border);
+    --fleet-table-header-bg: rgba(34, 197, 94, 0.1);
+    --fleet-pagination-bg: var(--color-card);
+    --fleet-filter-bg: rgba(20, 184, 166, 0.1);
+    --fleet-export-bg: rgba(167, 139, 250, 0.1);
+    --fleet-danger-bg: rgba(248, 113, 113, 0.1);
+    --fleet-danger-border: rgba(248, 113, 113, 0.3);
+    --fleet-success-bg: rgba(52, 211, 153, 0.1);
+    --fleet-success-border: rgba(52, 211, 153, 0.3);
+    --fleet-warning-bg: rgba(251, 191, 36, 0.1);
+    --fleet-warning-border: rgba(251, 191, 36, 0.3);
+    --fleet-info-bg: rgba(96, 165, 250, 0.1);
+    --fleet-info-border: rgba(96, 165, 250, 0.3);
   }
 }
 @layer base {

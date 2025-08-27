@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '../store';
 import type { AuthUser } from '../api/authApiSlice';
+import { authPersistence } from '../middleware/persistenceMiddleware';
 
 // Auth state interface
 export interface AuthState {
@@ -94,54 +95,42 @@ const authSlice = createSlice({
     },
     
     // Set credentials from localStorage (on app init)
-    setCredentialsFromStorage: (state) => {
-      const token = localStorage.getItem('token');
-      const userStr = localStorage.getItem('user');
-      const loginTime = localStorage.getItem('loginTime');
+    // Initialize auth state from localStorage
+    initializeFromStorage: (state) => {
+      const storedAuthState = authPersistence.loadAuthState();
       
-      if (token && userStr && loginTime) {
-        try {
-          const user = JSON.parse(userStr) as AuthUser;
-          
-          // Check if session is expired
-          if (isSessionExpired(loginTime)) {
-            // Session expired, clear everything
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            localStorage.removeItem('loginTime');
-            state.sessionExpired = true;
-            return;
-          }
-          
-          state.user = user;
-          state.token = token;
-          state.isAuthenticated = true;
-          state.loginTime = loginTime;
-          state.sessionExpired = false;
-        } catch (error) {
-          // Invalid user data, clear storage
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          localStorage.removeItem('loginTime');
+      if (storedAuthState) {
+        if (storedAuthState.sessionExpired) {
+          state.sessionExpired = true;
+          state.isAuthenticated = false;
+        } else {
+          Object.assign(state, storedAuthState);
+        }
+      }
+    },
+
+    // Legacy method - kept for backward compatibility
+    setCredentialsFromStorage: (state) => {
+      // Use the new initialization method
+      const storedAuthState = authPersistence.loadAuthState();
+      
+      if (storedAuthState) {
+        if (storedAuthState.sessionExpired) {
+          state.sessionExpired = true;
+          state.isAuthenticated = false;
+        } else {
+          Object.assign(state, storedAuthState);
         }
       }
     },
     
     // Logout
     logout: (state) => {
-      state.user = null;
-      state.token = null;
-      state.refreshToken = null;
-      state.isAuthenticated = false;
-      state.isLoading = false;
-      state.error = null;
-      state.loginTime = null;
-      state.sessionExpired = false;
+      // Reset state to initial values
+      Object.assign(state, initialState);
       
-      // Clear localStorage
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      localStorage.removeItem('loginTime');
+      // Clear localStorage using persistence utility
+      authPersistence.clearAuthState();
     },
     
     // Update user profile
@@ -188,6 +177,7 @@ export const {
   setError,
   clearError,
   setCredentials,
+  initializeFromStorage,
   setCredentialsFromStorage,
   logout,
   updateProfile,
