@@ -1,5 +1,6 @@
 import React from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { useRoleBasedNavigation } from '../../../utils/roleBasedNavigation';
 import { useSelector } from 'react-redux';
 import {
   ArrowLeft,
@@ -32,11 +33,16 @@ import {
   getCustomerDisplayName,
   getErrorMessage,
 } from '../utils';
-import { hasPermission } from '../../../utils/role';
+import {
+  EditButton,
+  ViewButton,
+  PermissionModule,
+  useModulePermissions,
+} from '../../../components/permissions';
 import { PERMISSIONS } from '../constants';
 
 const CustomerView: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useRoleBasedNavigation();
   const { customerId } = useParams<{ customerId: string }>();
   const user = useSelector(selectCurrentUser);
   
@@ -48,15 +54,13 @@ const CustomerView: React.FC = () => {
   } = useGetCustomerByIdQuery(customerId!, { skip: !customerId });
   
   // Extract customer data
-  const customer = customerResponse?.customer;
-  
-  // Permission checks
-  const canEdit = hasPermission(user, PERMISSIONS.EDIT_CUSTOMER);
-  const canViewLedger = hasPermission(user, PERMISSIONS.VIEW_LEDGER);
+  const customer = customerResponse?.customers;
+  // Permission checks using new system
+  const customerPermissions = useModulePermissions(PermissionModule.Customers);
   
   const handleBack = () => {
     const role = user?.Role?.roleName?.toLowerCase() || 'admin';
-    navigate(`/${role}/customer`);
+    navigate('/customer');
   };
   
   if (isLoading) {
@@ -103,23 +107,22 @@ const CustomerView: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-2">
-          {canViewLedger && (
-            <Button
-              variant="outline"
-              onClick={() => navigate(`/${user?.Role?.roleName?.toLowerCase() || 'admin'}/customer/ledger/${customerId}`)}
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              View Ledger
-            </Button>
-          )}
-          {canEdit && (
-            <Button
-              onClick={() => navigate(`/${user?.Role?.roleName?.toLowerCase() || 'admin'}/customer/edit/${customerId}`)}
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Customer
-            </Button>
-          )}
+          <ViewButton 
+            module={PermissionModule.Customers}
+            action="ledger"
+            variant="outline"
+            onClick={() => navigate(`/${user?.Role?.roleName?.toLowerCase() || 'admin'}/customer/ledger/${customerId}`)}
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            View Ledger
+          </ViewButton>
+          <EditButton 
+            module={PermissionModule.Customers}
+            onClick={() => navigate(`/${user?.Role?.roleName?.toLowerCase() || 'admin'}/customer/edit/${customerId}`)}
+          >
+            <Edit className="h-4 w-4 mr-2" />
+            Edit Customer
+          </EditButton>
         </div>
       </div>
       

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRoleBasedNavigation } from '../../../utils/roleBasedNavigation';
 import { useSelector } from 'react-redux';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -57,7 +57,7 @@ import { fleetSchema } from '../schemas/fleetSchema';
 import type { FleetAttachment, FleetSticker, FleetFormData } from '../types';
 
 const FleetCreate: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useRoleBasedNavigation();
   const user = useSelector(selectCurrentUser);
   const [attachments, setAttachments] = useState<FleetAttachment[]>([]);
   const [stickers, setStickers] = useState<FleetSticker[]>([]);
@@ -113,7 +113,7 @@ const FleetCreate: React.FC = () => {
 
   const handleBack = () => {
     const role = user?.Role?.roleName?.toLowerCase() || 'administrative';
-    navigate(`/${role}/fleet`);
+    navigate('/fleet');
   };
 
   const onSubmit = async (data: FleetFormData) => {

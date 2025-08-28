@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import useRoleNavigation from '../../../utils/useNavigation';
+import { NavigationPaths } from '../../../utils/navigationPaths';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   Car,
@@ -59,6 +60,17 @@ import {
   useBulkDeleteFleetsMutation,
   useExportFleetsMutation,
 } from '../../../stores/api/fleetApiSlice';
+import {
+  CreateButton,
+  EditButton,
+  DeleteButton,
+  ViewButton,
+  ExportButton,
+  ActionsDropdown,
+  BulkActionsDropdown,
+  CreatePermission,
+  PermissionModule,
+} from '../../../components/permissions';
 import { selectCurrentUser } from '../../../stores/slices/authSlice';
 import {
   selectSearchQuery,
@@ -81,7 +93,7 @@ import { formatDate } from '../utils';
 import type { Fleet, FleetType } from '../types';
 
 const FleetList: React.FC = () => {
-  const navigate = useNavigate();
+  const { roleNavigate } = useRoleNavigation();
   const dispatch = useDispatch();
   const user = useSelector(selectCurrentUser);
   const searchQuery = useSelector(selectSearchQuery);
@@ -161,11 +173,11 @@ const FleetList: React.FC = () => {
   };
 
   const handleView = (fleetId: string) => {
-    navigate(`/${role}/fleet/view/${fleetId}`);
+    roleNavigate(NavigationPaths.FLEET.VIEW(fleetId));
   };
 
   const handleEdit = (fleetId: string) => {
-    navigate(`/${role}/fleet/edit/${fleetId}`);
+    roleNavigate(NavigationPaths.FLEET.EDIT(fleetId));
   };
 
   const handleDelete = async (fleetId: string) => {
@@ -210,7 +222,7 @@ const FleetList: React.FC = () => {
   };
 
   const handleCreate = () => {
-    navigate(`/${role}/fleet/create`);
+    roleNavigate(NavigationPaths.FLEET.CREATE);
   };
 
   const getFleetTypeLabel = (fleetTypeId?: string): string => {
@@ -233,31 +245,17 @@ const FleetList: React.FC = () => {
                 />
                 <Car className="h-5 w-5 text-primary" />
               </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                  <Button variant="ghost" size="sm">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleView(fleet.fleetId!)}>
-                    <Eye className="h-4 w-4 mr-2" />
-                    View
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleEdit(fleet.fleetId!)}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => handleDelete(fleet.fleetId!)}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <ActionsDropdown
+                 module={PermissionModule.Fleet}
+                 onView={() => handleView(fleet.fleetId!)}
+                 onEdit={() => handleEdit(fleet.fleetId!)}
+                 onDelete={() => handleDelete(fleet.fleetId!)}
+                 trigger={
+                   <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+                     <MoreHorizontal className="h-4 w-4" />
+                   </Button>
+                 }
+               />
             </div>
             <div onClick={() => handleView(fleet.fleetId!)}>
               <CardTitle className="text-lg">{fleet.vehicleName}</CardTitle>
@@ -339,31 +337,17 @@ const FleetList: React.FC = () => {
               </TableCell>
               <TableCell>{formatDate(fleet.registrationExpiryDate)}</TableCell>
               <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                <ActionsDropdown
+                  module={PermissionModule.Fleet}
+                  onView={() => handleView(fleet.fleetId!)}
+                  onEdit={() => handleEdit(fleet.fleetId!)}
+                  onDelete={() => handleDelete(fleet.fleetId!)}
+                  trigger={
                     <Button variant="ghost" size="sm">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleView(fleet.fleetId!)}>
-                      <Eye className="h-4 w-4 mr-2" />
-                      View
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleEdit(fleet.fleetId!)}>
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => handleDelete(fleet.fleetId!)}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  }
+                />
               </TableCell>
             </TableRow>
           ))}
@@ -396,10 +380,10 @@ const FleetList: React.FC = () => {
             Manage your fleet vehicles, registrations, and documentation
           </p>
         </div>
-        <Button onClick={handleCreate} className="bg-primary hover:bg-primary/90">
+        <CreateButton module={PermissionModule.Fleet} onClick={handleCreate} className="bg-primary hover:bg-primary/90">
           <Plus className="h-4 w-4 mr-2" />
           Add Fleet
-        </Button>
+        </CreateButton>
       </div>
 
       {/* Search and Filters */}
@@ -427,12 +411,10 @@ const FleetList: React.FC = () => {
                 Filters
               </Button>
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
-                    <Download className="h-4 w-4 mr-2" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
+                <ExportButton module={PermissionModule.Fleet} variant="outline">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
+                </ExportButton>
                 <DropdownMenuContent>
                   <DropdownMenuItem onClick={() => handleExport('csv')} disabled={isExporting}>
                     Export as CSV
@@ -513,10 +495,18 @@ const FleetList: React.FC = () => {
                 {selectedFleetIds.length} fleet(s) selected
               </span>
               <div className="flex gap-2">
-                <Button onClick={handleBulkDelete} variant="destructive" size="sm">
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Selected
-                </Button>
+                <BulkActionsDropdown
+                  module={PermissionModule.Fleet}
+                  selectedCount={selectedFleetIds.length}
+                  onBulkDelete={handleBulkDelete}
+                  onBulkExport={() => handleExport('csv')}
+                  trigger={
+                    <Button variant="outline" size="sm">
+                      <MoreHorizontal className="h-4 w-4 mr-2" />
+                      Actions ({selectedFleetIds.length})
+                    </Button>
+                  }
+                />
                 <Button onClick={() => dispatch(clearSelection())} variant="outline" size="sm">
                   Clear Selection
                 </Button>
@@ -570,12 +560,14 @@ const FleetList: React.FC = () => {
                 ? 'No fleets match your search criteria.'
                 : 'Get started by adding your first fleet vehicle.'}
             </p>
-            {!searchQuery && Object.keys(filters).length === 0 && (
-              <Button onClick={handleCreate}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Fleet
-              </Button>
-            )}
+            <CreatePermission module={PermissionModule.Fleet}>
+              {!searchQuery && Object.keys(filters).length === 0 && (
+                <Button onClick={handleCreate}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Fleet
+                </Button>
+              )}
+            </CreatePermission>
           </CardContent>
         </Card>
       ) : viewMode === 'grid' ? (

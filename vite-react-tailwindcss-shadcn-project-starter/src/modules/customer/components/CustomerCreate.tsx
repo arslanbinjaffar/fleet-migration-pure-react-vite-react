@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRoleBasedNavigation } from '../../../utils/roleBasedNavigation';
 import { useSelector } from 'react-redux';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -61,7 +61,7 @@ import {
 } from '../utils';
 
 const CustomerCreate: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useRoleBasedNavigation();
   const user = useSelector(selectCurrentUser);
   const [currentStep, setCurrentStep] = useState(0);
   
@@ -94,7 +94,7 @@ const CustomerCreate: React.FC = () => {
   
   const handleBack = () => {
     const role = user?.Role?.roleName?.toLowerCase() || 'admin';
-    navigate(`/${role}/customer`);
+    navigate('/customer');
   };
   
   const onSubmit = async (data: CustomerFormData) => {

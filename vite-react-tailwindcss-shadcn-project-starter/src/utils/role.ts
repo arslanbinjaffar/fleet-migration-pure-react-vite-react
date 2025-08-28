@@ -2,6 +2,14 @@ import { useSelector } from "react-redux";
 import { selectCurrentUser } from "../stores/slices/authSlice";
 import { useMemo } from "react";
 
+// Import new permission system for enhanced functionality
+import {
+  usePermissions,
+  useModulePermissions,
+  useHasPermission,
+} from '../components/permissions';
+import { PermissionModule, PermissionModuleType } from '../types/permissions';
+
 // Types
 interface Permission {
   module: string;
@@ -34,6 +42,7 @@ export const useUserPermissions = (): Permission[] => {
 };
 
 // Hook to get permission set for a specific module
+// DEPRECATED: Use useModulePermissions from the new permission system instead
 export const usePermissionSet = (subModule: string) => {
   const userPermissions = useUserPermissions();
 
@@ -53,6 +62,28 @@ export const usePermissionSet = (subModule: string) => {
   }, [subModule, userPermissions]);
 
   return result;
+};
+
+// Enhanced permission set hook using new permission system
+// This provides better type safety and performance
+export const useEnhancedPermissionSet = (module: PermissionModuleType) => {
+  return useModulePermissions(module);
+};
+
+// Convenience hook that works with both old and new permission names
+export const useCompatiblePermissionSet = (moduleName: string) => {
+  // Try to map old permission names to new ones
+  const moduleKey = Object.keys(PermissionModule).find(
+    key => PermissionModule[key as keyof typeof PermissionModule].toLowerCase() === moduleName.toLowerCase()
+  );
+  
+  if (moduleKey) {
+    const module = PermissionModule[moduleKey as keyof typeof PermissionModule];
+    return useModulePermissions(module);
+  }
+  
+  // Fallback to old system for unmapped modules
+  return usePermissionSet(moduleName);
 };
 
 // Permission names enum
@@ -154,5 +185,80 @@ export const hasPermissionWithAction = (user: AuthUser | null, permissionName: s
   return permission ? permission.actions.includes(action) : false;
 };
 
+// Enhanced permission checking functions using new system
+export const useEnhancedHasPermission = (module: PermissionModuleType, action?: string) => {
+  return useHasPermission(module, action as any);
+};
+
+// Backward compatible permission checking
+export const useCompatibleHasPermission = (moduleName: string, action?: string) => {
+  const moduleKey = Object.keys(PermissionModule).find(
+    key => PermissionModule[key as keyof typeof PermissionModule].toLowerCase() === moduleName.toLowerCase()
+  );
+  
+  if (moduleKey) {
+    const module = PermissionModule[moduleKey as keyof typeof PermissionModule];
+    return useHasPermission(module, action as any);
+  }
+  
+  // Fallback to old system
+  const user = useSelector(selectCurrentUser) as AuthUser | null;
+  return hasPermission(user, moduleName);
+};
+
 // Export types for use in other components
 export type { Permission, UserRole, AuthUser };
+
+// Re-export new permission system components for convenience
+export {
+  PermissionButton,
+  CreateButton,
+  EditButton,
+  DeleteButton,
+  ViewButton,
+  ExportButton,
+  ManageButton,
+  ApproveButton,
+  PermissionDropdown,
+  PermissionDropdownItem,
+  ActionsDropdown,
+  StatusDropdown,
+  BulkActionsDropdown,
+  PermissionWrapper,
+  AdminOnly,
+  ManagerOrAbove,
+  CreatePermission,
+  EditPermission,
+  DeletePermission,
+  ViewPermission,
+  ExportPermission,
+  ManagePermission,
+  usePermissions,
+  useUserRole as useEnhancedUserRole,
+  useModulePermissions,
+  useHasPermission,
+  useHasPermissions,
+  useHasAnyPermission,
+  PermissionModule,
+} from '../components/permissions';
+
+/**
+ * Migration Guide:
+ * 
+ * OLD WAY:
+ * ```jsx
+ * const { create, update, delete: del, read } = usePermissionSet(PermissionName.Fleet);
+ * ```
+ * 
+ * NEW WAY (Recommended):
+ * ```tsx
+ * const fleetPermissions = useModulePermissions(PermissionModule.Fleet);
+ * // or for individual checks:
+ * const canCreate = useHasPermission(PermissionModule.Fleet, 'create');
+ * ```
+ * 
+ * COMPATIBLE WAY (for gradual migration):
+ * ```tsx
+ * const { create, update, delete: del, read } = useCompatiblePermissionSet('Fleet');
+ * ```
+ */

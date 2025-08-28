@@ -4,6 +4,8 @@ import Dashboard from "../pages/Dashboard";
 import { FleetList, FleetView, FleetEdit } from "../modules/fleet/components";
 import { LposList, LposView, LposEdit, LposCreate } from "../modules/lpos";
 import { CustomerList, CustomerCreate, CustomerEdit, CustomerView, CustomerLedger } from "../modules/customer";
+import { Timesheet, ManageCheckin } from "../modules/timesheet";
+import { PurchaseOrderList, PurchaseOrderCreate, PurchaseOrderEdit, PurchaseOrderView, SupplierList, SupplierCreate, SupplierEdit, SupplierView, SupplierLedger, AddPaymentByFleet, FleetPurchases, ViewFleetPurchases, FleetReceiveShipping } from "../modules/fleet-purchases";
 
 // Fleet Components
 import FleetCreate from '@/modules/fleet/components/FleetCreate';
@@ -113,14 +115,22 @@ export const allRoutes: RouteConfig[] = [
     action: ["update"]
   },
   
-  // Timesheets Routes
+  // Timesheet Management Routes
   {
     url: "scheduled",
-    component: <div>Timesheets Component</div>, // Placeholder
+    component: <Timesheet />,
     module: "MRM",
     name: "Timesheets",
-    access: ["admin"],
+    access: ["admin", "manager"],
     action: ["create", "read", "update", "delete"]
+  },
+  {
+    url: "schedule/edit",
+    component: <ManageCheckin />,
+    module: "MRM",
+    name: "Scheduled",
+    access: ["admin"],
+    action: ["update"]
   },
   
   // Customer Management Routes
@@ -204,6 +214,112 @@ export const allRoutes: RouteConfig[] = [
     access: ["admin"],
     action: ["create", "read", "update", "delete"]
   },
+  
+  // Fleet Purchases Routes
+  {
+    url: "purchase-order-fleet",
+    component: <PurchaseOrderList />,
+    module: "MRM",
+    name: "Purchase Orders",
+    access: ["admin", "manager"],
+    action: ["create", "read", "update", "delete"]
+  },
+  {
+    url: "purchase-order-fleet/create",
+    component: <PurchaseOrderCreate />,
+    module: "MRM",
+    name: "Create Purchase Order",
+    access: ["admin", "manager"],
+    action: ["create"]
+  },
+  {
+    url: "purchase-order-fleet/edit/:id",
+    component: <PurchaseOrderEdit />,
+    module: "MRM",
+    name: "Edit Purchase Order",
+    access: ["admin", "manager"],
+    action: ["update"]
+  },
+  {
+    url: "purchase-order-fleet/view/:id",
+    component: <PurchaseOrderView />,
+    module: "MRM",
+    name: "View Purchase Order",
+    access: ["admin", "manager", "employee"],
+    action: ["read"]
+  },
+  {
+    url: "supplier-fleet",
+    component: <SupplierList />,
+    module: "MRM",
+    name: "Suppliers",
+    access: ["admin", "manager"],
+    action: ["create", "read", "update", "delete"]
+  },
+  {
+     url: "supplier-fleet/create",
+     component: <SupplierCreate />,
+     module: "MRM",
+     name: "Create Supplier",
+     access: ["admin", "manager"],
+     action: ["create"]
+   },
+   {
+     url: "supplier-fleet/edit/:id",
+     component: <SupplierEdit />,
+     module: "MRM",
+     name: "Edit Supplier",
+     access: ["admin", "manager"],
+     action: ["update"]
+   },
+   {
+     url: "supplier-fleet/view/:id",
+     component: <SupplierView />,
+     module: "MRM",
+     name: "View Supplier",
+     access: ["admin", "manager", "employee"],
+     action: ["read"]
+   },
+   {
+     url: "supplier-fleet/ledger/:id",
+     component: <SupplierLedger />,
+     module: "MRM",
+     name: "Supplier Ledger",
+     access: ["admin", "manager", "employee"],
+     action: ["read"]
+   },
+   {
+     url: "add-payment/supplier/create/fleet",
+     component: <AddPaymentByFleet />,
+     module: "MRM",
+     name: "Add Supplier Payment",
+     access: ["admin", "manager"],
+     action: ["create"]
+   },
+  {
+     url: "purchases-fleet",
+     component: <FleetPurchases />,
+     module: "MRM",
+     name: "Fleet Purchases",
+     access: ["admin", "manager", "employee"],
+     action: ["read"]
+   },
+   {
+     url: "purchases-fleet/view/:id",
+     component: <ViewFleetPurchases />,
+     module: "MRM",
+     name: "View Fleet Purchase",
+     access: ["admin", "manager", "employee"],
+     action: ["read"]
+   },
+   {
+     url: "receive-shipping-fleet",
+     component: <FleetReceiveShipping />,
+     module: "MRM",
+     name: "Receive Shipping",
+     access: ["admin", "manager"],
+     action: ["create"]
+   },
   
   // Error Page Routes
   {

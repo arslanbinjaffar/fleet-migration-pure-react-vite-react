@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRoleBasedNavigation } from '../../../utils/roleBasedNavigation';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   Users,
@@ -108,10 +108,21 @@ import {
   prepareCustomersForExport,
   getErrorMessage,
 } from '../utils';
-import { hasPermission } from '../../../utils/role';
+import {
+  CreateButton,
+  EditButton,
+  DeleteButton,
+  ViewButton,
+  ExportButton,
+  ActionsDropdown,
+  BulkActionsDropdown,
+  CreatePermission,
+  PermissionModule,
+  useModulePermissions,
+} from '../../../components/permissions';
 
 const CustomerList: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useRoleBasedNavigation();
   const dispatch = useDispatch();
   const user = useSelector(selectCurrentUser);
   
@@ -160,12 +171,8 @@ const CustomerList: React.FC = () => {
     }
   }, [error]);
   
-  // Permission checks
-  const canCreate = hasPermission(user, PERMISSIONS.CREATE_CUSTOMER);
-  const canEdit = hasPermission(user, PERMISSIONS.EDIT_CUSTOMER);
-  const canDelete = hasPermission(user, PERMISSIONS.DELETE_CUSTOMER);
-  const canViewLedger = hasPermission(user, PERMISSIONS.VIEW_LEDGER);
-  
+  // Permission checks using new system
+  const customerPermissions = useModulePermissions(PermissionModule.Customers);
   // Handlers
   const handleSearch = (value: string) => {
     dispatch(setSearchQuery(value));
@@ -283,16 +290,14 @@ const CustomerList: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleExport}>
+          <ExportButton module={PermissionModule.Customers} variant="outline" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" />
             Export
-          </Button>
-          {canCreate && (
-            <Button onClick={() => navigate(`/${user?.Role?.roleName?.toLowerCase() || 'admin'}/customer/create`)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Customer
-            </Button>
-          )}
+          </ExportButton>
+          <CreateButton module={PermissionModule.Customers} onClick={() => navigate('/customer/create')}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Customer
+          </CreateButton>
         </div>
       </div>
       
@@ -360,12 +365,14 @@ const CustomerList: React.FC = () => {
               <p className="text-muted-foreground mb-4">
                 {searchQuery || (filters.status && filters.status !== 'all') ? 'Try adjusting your search or filters' : 'Get started by adding your first customer'}
               </p>
-              {canCreate && !searchQuery && (!filters.status || filters.status === 'all') && (
-                <Button onClick={() => navigate(`/${user?.Role?.roleName?.toLowerCase() || 'admin'}/customer/create`)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Customer
-                </Button>
-              )}
+              <CreatePermission module={PermissionModule.Customers}>
+                {!searchQuery && (!filters.status || filters.status === 'all') && (
+                  <Button onClick={() => navigate(`/${user?.Role?.roleName?.toLowerCase() || 'admin'}/customer/create`)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Customer
+                  </Button>
+                )}
+              </CreatePermission>
             </div>
           ) : (
             <>
@@ -511,53 +518,18 @@ const CustomerList: React.FC = () => {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
+                            <ActionsDropdown
+                              module={PermissionModule.Customers}
+                              onView={() => navigate(`/${user?.Role?.roleName?.toLowerCase() || 'admin'}/customer/view/${customer.customerId}`)}
+                              onEdit={() => navigate(`/${user?.Role?.roleName?.toLowerCase() || 'admin'}/customer/edit/${customer.customerId}`)}
+                              onDelete={() => openDeleteDialog(customer.customerId!)}
+                              onManage={() => navigate(`/${user?.Role?.roleName?.toLowerCase() || 'admin'}/customer/ledger/${customer.customerId}`)}
+                              trigger={
                                 <Button variant="ghost" className="h-8 w-8 p-0">
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem
-                                  onClick={() => navigate(`/${user?.Role?.roleName?.toLowerCase() || 'admin'}/customer/view/${customer.customerId}`)}
-                                >
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View Details
-                                </DropdownMenuItem>
-                                {canViewLedger && (
-                                  <DropdownMenuItem
-                                    onClick={() => navigate(`/${user?.Role?.roleName?.toLowerCase() || 'admin'}/customer/ledger/${customer.customerId}`)}
-                                  >
-                                    <FileText className="h-4 w-4 mr-2" />
-                                    View Ledger
-                                  </DropdownMenuItem>
-                                )}
-                                <DropdownMenuSeparator />
-                                {canEdit && (
-                                  <DropdownMenuItem
-                                    onClick={() => navigate(`/${user?.Role?.roleName?.toLowerCase() || 'admin'}/customer/edit/${customer.customerId}`)}
-                                  >
-                                    <Edit className="h-4 w-4 mr-2" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                )}
-                                {canEdit && (
-                                  <DropdownMenuItem onClick={() => handleStatusToggle(customer)}>
-                                    {customer.status ? 'Activate' : 'Deactivate'}
-                                  </DropdownMenuItem>
-                                )}
-                                {canDelete && (
-                                  <DropdownMenuItem
-                                    onClick={() => openDeleteDialog(customer.customerId!)}
-                                    className="text-destructive"
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                              }
+                            />
                           </TableCell>
                         </TableRow>
                       );

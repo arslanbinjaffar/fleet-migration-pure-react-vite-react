@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { useRoleBasedNavigation } from '../../../utils/roleBasedNavigation';
 import { useSelector } from 'react-redux';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -85,11 +86,15 @@ import {
   getTotalBalance,
   getErrorMessage,
 } from '../utils';
-import { hasPermission } from '../../../utils/role';
+import {
+  CreateButton,
+  PermissionModule,
+  useHasPermission,
+} from '../../../components/permissions';
 import { PERMISSIONS } from '../constants';
 
 const CustomerLedger: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useRoleBasedNavigation();
   const { customerId } = useParams<{ customerId: string }>();
   const user = useSelector(selectCurrentUser);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -113,11 +118,9 @@ const CustomerLedger: React.FC = () => {
     page: currentPage,
     limit: pageSize,
   }, { skip: !customerId });
-  
   const [createLedgerEntry, { isLoading: isCreating }] = useCreateCustomerLedgerMutation();
-  
   // Extract data
-  const customer = customerResponse?.customer;
+  const customer = customerResponse?.customers;
   const ledgers = ledgerResponse?.ledgers || [];
   const totalBalance = ledgerResponse?.balance || 0;
   
@@ -139,12 +142,12 @@ const CustomerLedger: React.FC = () => {
   
   const { control, handleSubmit, reset, formState: { errors } } = form;
   
-  // Permission checks
-  const canCreateLedger = hasPermission(user, PERMISSIONS.CREATE_LEDGER);
+  // Permission checks using new system
+  const canCreateLedger = useHasPermission(PermissionModule.Customers, 'ledger');
   
   const handleBack = () => {
     const role = user?.Role?.roleName?.toLowerCase() || 'admin';
-    navigate(`/${role}/customer`);
+    navigate('/customer');
   };
   
   const onSubmit = async (data: CustomerLedgerFormData) => {
@@ -173,7 +176,7 @@ const CustomerLedger: React.FC = () => {
       </div>
     );
   }
-  
+  console.log(customer,"customer")
   if (customerError || !customer) {
     return (
       <div className="container mx-auto px-4 py-8">

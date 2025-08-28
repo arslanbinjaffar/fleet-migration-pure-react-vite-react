@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { useRoleBasedNavigation } from '../../../utils/roleBasedNavigation';
 import { useSelector } from 'react-redux';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -64,7 +65,7 @@ import {
 } from '../utils';
 
 const CustomerEdit: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useRoleBasedNavigation();
   const { customerId } = useParams<{ customerId: string }>();
   const user = useSelector(selectCurrentUser);
   const [currentStep, setCurrentStep] = useState(0);
@@ -79,7 +80,7 @@ const CustomerEdit: React.FC = () => {
   const [updateCustomer, { isLoading: isSubmitting }] = useUpdateCustomerMutation();
   
   // Extract customer data
-  const customer = customerResponse?.customer;
+  const customer = customerResponse?.customers;
   
   const form = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
@@ -139,7 +140,7 @@ const CustomerEdit: React.FC = () => {
   
   const handleBack = () => {
     const role = user?.Role?.roleName?.toLowerCase() || 'admin';
-    navigate(`/${role}/customer`);
+    navigate('/customer');
   };
   
   const onSubmit = async (data: CustomerFormData) => {

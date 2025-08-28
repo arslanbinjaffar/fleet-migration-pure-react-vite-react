@@ -110,7 +110,16 @@ import {
   prepareLPOsForExport,
   getErrorMessage,
 } from '../utils';
-import { usePermissionSet } from '../../../utils/role';
+import {
+  CreateButton,
+  EditButton,
+  DeleteButton,
+  ViewButton,
+  ExportButton,
+  ActionsDropdown,
+  PermissionModule,
+  useModulePermissions,
+} from '../../../components/permissions';
 
 const LposList: React.FC = () => {
 const navigate=useNavigate()
@@ -264,12 +273,8 @@ const navigate=useNavigate()
     }
   };
 
-  // Permission checks
-  const canCreate = usePermissionSet(PERMISSIONS.CREATE_LPO);
-  const canEdit = usePermissionSet( PERMISSIONS.EDIT_LPO);
-  const canDelete = usePermissionSet( PERMISSIONS.DELETE_LPO);
-  const canStop = usePermissionSet( PERMISSIONS.STOP_LPO);
-  const canExport = usePermissionSet( PERMISSIONS.EXPORT_LPO);
+  // Permission checks using new system
+  const lposPermissions = useModulePermissions(PermissionModule.LPOS);
 
   if (isLoading) {
     return (
@@ -291,18 +296,14 @@ const navigate=useNavigate()
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {canExport && (
-            <Button variant="outline" onClick={handleExport}>
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
-          )}
-          {canCreate && (
-            <Button onClick={() => navigate(`/${user?.Role?.roleName}/lpos/create`)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create LPO
-            </Button>
-          )}
+          <ExportButton module={PermissionModule.LPOS} variant="outline" onClick={handleExport}>
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </ExportButton>
+          <CreateButton module={PermissionModule.LPOS} onClick={() => navigate(`/${user?.Role?.roleName}/lpos/create`)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create LPO
+          </CreateButton>
         </div>
       </div>
 
@@ -388,12 +389,14 @@ const navigate=useNavigate()
               <p className="text-muted-foreground mb-4">
                 {searchQuery || (filters.status && filters.status !== 'all') ? 'Try adjusting your search or filters' : 'Get started by creating your first LPO'}
               </p>
-              {canCreate && !searchQuery && (!filters.status || filters.status === 'all') && (
-                <Button onClick={() => navigate(`/${user?.Role?.roleName}/lpos/create`)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create LPO
-                </Button>
-              )}
+              <CreateButton module={PermissionModule.LPOS} fallback={null}>
+                {!searchQuery && (!filters.status || filters.status === 'all') && (
+                  <Button onClick={() => navigate(`/${user?.Role?.roleName}/lpos/create`)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create LPO
+                  </Button>
+                )}
+              </CreateButton>
             </div>
           ) : (
             <>
@@ -501,51 +504,20 @@ const navigate=useNavigate()
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
+                          <ActionsDropdown
+                            module={PermissionModule.LPOS}
+                            onView={() => navigate(`/${user?.Role?.roleName}/lpos/${lpo.lpoId}`)}
+                            onEdit={() => navigate(`/${user?.Role?.roleName}/lpos/${lpo.lpoId}/edit`)}
+                            onDelete={() => {
+                              setSelectedLpoId(lpo.lpoId);
+                              setDeleteDialogOpen(true);
+                            }}
+                            trigger={
                               <Button variant="ghost" size="sm">
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem onClick={() => navigate(`/${user?.Role?.roleName}/lpos/${lpo.lpoId}`)}>
-                                <Eye className="h-4 w-4 mr-2" />
-                                View
-                              </DropdownMenuItem>
-                              {canEdit && (
-                                <DropdownMenuItem onClick={() => navigate(`/${user?.Role?.roleName}/lpos/${lpo.lpoId}/edit`)}>
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Edit
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuSeparator />
-                              {canStop && lpo.status === 'Approved' && (
-                                <DropdownMenuItem 
-                                  onClick={() => {
-                                    setSelectedLpoId(lpo.lpoId);
-                                    setStopDialogOpen(true);
-                                  }}
-                                  className="text-yellow-600"
-                                >
-                                  <StopCircle className="h-4 w-4 mr-2" />
-                                  Stop
-                                </DropdownMenuItem>
-                              )}
-                              {canDelete && (
-                                <DropdownMenuItem 
-                                  onClick={() => {
-                                    setSelectedLpoId(lpo.lpoId);
-                                    setDeleteDialogOpen(true);
-                                  }}
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                            }
+                          />
                         </TableCell>
                       </TableRow>
                     );

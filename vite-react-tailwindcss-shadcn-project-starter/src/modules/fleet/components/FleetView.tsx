@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { useRoleBasedNavigation } from '../../../utils/roleBasedNavigation';
 import { useSelector } from 'react-redux';
 import {
   Car,
@@ -22,6 +23,10 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 
 import { useGetFleetByIdQuery, useGetFleetTypesQuery } from '../../../stores/api/fleetApiSlice';
+import {
+  EditButton,
+  PermissionModule,
+} from '../../../components/permissions';
 import { selectCurrentUser } from '../../../stores/slices/authSlice';
 import { formatDate, getFilenameFromUrl, handleDownload } from '../utils';
 import {
@@ -33,7 +38,7 @@ import type { Fleet, FleetType } from '../types';
 
 const FleetView: React.FC = () => {
   const { fleetId } = useParams<{ fleetId: string }>();
-  const navigate = useNavigate();
+  const navigate = useRoleBasedNavigation();
   const user = useSelector(selectCurrentUser);
   const [downloadingFiles, setDownloadingFiles] = useState<Record<string, boolean>>({});
 
@@ -73,13 +78,11 @@ const FleetView: React.FC = () => {
   };
 
   const handleBack = () => {
-    const role = user?.Role?.roleName?.toLowerCase() || 'administrative';
-    navigate(`/${role}/fleet`);
+    navigate('/fleet');
   };
 
   const handleEdit = () => {
-    const role = user?.Role?.roleName?.toLowerCase() || 'administrative';
-    navigate(`/${role}/fleet/edit/${fleetId}`);
+    navigate(`/fleet/edit/${fleetId}`);
   };
 
   if (isLoading) {
@@ -134,9 +137,9 @@ const FleetView: React.FC = () => {
             </p>
           </div>
         </div>
-        <Button onClick={handleEdit} className="bg-primary hover:bg-primary/90">
+        <EditButton module={PermissionModule.Fleet} onClick={handleEdit} className="bg-primary hover:bg-primary/90">
           Edit Fleet
-        </Button>
+        </EditButton>
       </div>
 
       {/* Fleet Overview */}

@@ -7,6 +7,7 @@ import { store, persistor } from './stores/store';
 import AppRoutes from './routes/AppRoutes';
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from './contexts/ThemeContext';
+import { PermissionProvider } from './contexts/PermissionContext';
 
 // Loading component for PersistGate
 const PersistLoading: React.FC = () => {
@@ -39,9 +40,11 @@ const App: React.FC = () => {
   return (
     <Provider store={store}>
       <PersistGate loading={<PersistLoading />} persistor={persistor}>
-        <ThemeProvider defaultTheme="dark">
-          <AppContent />
-        </ThemeProvider>
+        <PermissionProvider>
+          <ThemeProvider defaultTheme="dark">
+            <AppContent />
+          </ThemeProvider>
+        </PermissionProvider>
       </PersistGate>
     </Provider>
   );
