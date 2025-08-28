@@ -75,8 +75,47 @@ export interface FleetType {
   fleetType: string;
 }
 
-export interface FleetFormData extends Omit<Fleet, 'fleetId'> {
-  attachments?: FleetAttachment[];
+export interface FleetFormData {
+  fleetType: string;
+  plateNumber: string;
+  plateType: string;
+  ownerName: string;
+  ownerID: string;
+  nationality: string;
+  hourlyRate?: number;
+  firstRegistrationDate?: string;
+  registrationRenewalDate?: string;
+  registrationExpiryDate?: string;
+  fahesDate?: string;
+  fahesReport?: File;
+  fahesReportUrl?: string;
+  vehicleName: string;
+  vehicleModel: string;
+  madeIn: string;
+  productionDate?: string;
+  shape: string;
+  noOfCylinders?: number;
+  numberOfDoors?: number;
+  weight?: number;
+  grossWeight?: number;
+  color: string;
+  subColor?: string;
+  chassisNumber: string;
+  engineNumber: string;
+  insurer: string;
+  insurancePolicy: string;
+  insuranceExpiryDate?: string;
+  ownershipType: string;
+  insuranceType: string;
+  tpcInspectionAs?: string;
+  tpcExpiryDate?: string;
+  thirdPartyCertificateCo?: string;
+  inspectionDate?: string;
+  inspectionExpiryDate?: string;
+  inspectionType?: string;
+  dateOfLastExamination?: string;
+  dateOfNextExamination?: string;
+  [key: string]: any;
 }
 
 export interface FleetApiResponse {

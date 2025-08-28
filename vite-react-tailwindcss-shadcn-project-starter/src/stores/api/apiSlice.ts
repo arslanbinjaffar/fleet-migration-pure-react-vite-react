@@ -16,9 +16,9 @@ export const apiSlice = createApi({
       }
       
       // Don't set content-type for FormData (let browser set it with boundary)
-      if (!(extraOptions as any)?.formData) {
-        headers.set('content-type', 'application/json');
-      }
+      // if (!(extraOptions as any)?.formData) {
+      //   headers.set('content-type', 'application/json');
+      // }
       
       return headers;
     },

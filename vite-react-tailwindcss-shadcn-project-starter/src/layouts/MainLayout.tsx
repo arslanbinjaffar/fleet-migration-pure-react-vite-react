@@ -1,91 +1,67 @@
-import React, { useState, useEffect, useContext } from "react";
-import { Outlet } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { selectCurrentUser } from "../stores/slices/authSlice";
-import { useMenuList } from "./nav/Menu";
+import { useMenuList } from "../hooks/useMenuList";
 import Header from "./nav/Header";
 import Sidebar from "./nav/SideBar";
 import MobileNav from "./nav/MobileNav";
-import { ThemeContext } from "../contexts/ThemeContext";
 import { cn } from "../lib/utils";
-
-// Types
-interface Permission {
-  module: string;
-  name: string;
-  actions: string[];
-}
-
-interface UserRole {
-  roleName: string;
-  permissions: Permission[];
-}
-
-interface AuthUser {
-  email?: string;
-  avatar?: string;
-  Role?: UserRole;
-  [key: string]: any;
-}
+import type { AuthUser } from "../utils/role";
 
 const MainLayout: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedModule, setSelectedModule] = useState<string>("");
   const [headerFixed, setHeaderFixed] = useState(false);
   
-  // Theme context integration
-  const { sidebariconHover } = useContext(ThemeContext) || { sidebariconHover: false };
-  
   const user = useSelector(selectCurrentUser) as AuthUser | null;
+  const role = user?.Role?.roleName?.toLowerCase() || "admin";
   
-  // Get user permissions with proper error handling
-  const getUserPermissions = (): Permission[] => {
+  const getUserPermissions = () => {
+    if (user?.Role?.permissions) {
+      return user.Role.permissions;
+    }
+    
     try {
       const storedUser = localStorage.getItem("user");
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
         return parsedUser?.Role?.permissions || [];
       }
-      return user?.Role?.permissions || [];
     } catch (error) {
-      console.error("Error parsing user permissions:", error);
-      return user?.Role?.permissions || [];
+      console.error("Error parsing user from localStorage:", error);
     }
+    return [];
   };
   
   const userPermissions = getUserPermissions();
-  const menuList = useMenuList(userPermissions);
+  const menuData = useMenuList(userPermissions);
 
-  // Initialize selectedModule with the first module (enhanced functionality requirement)
   useEffect(() => {
-    if (menuList && menuList.length > 0) {
-      const storedModule = localStorage.getItem("selectedModule");
-      if (storedModule) {
-        setSelectedModule(storedModule);
-      } else {
-        // Set first module as default (enhanced functionality)
-        const firstModule = menuList[0]?.module;
-        if (firstModule) {
-          setSelectedModule(firstModule);
-          localStorage.setItem("selectedModule", firstModule);
-        }
-      }
+    const storedModule = localStorage.getItem("selectedModule");
+    if (storedModule && menuData.modules.includes(storedModule)) {
+      setSelectedModule(storedModule);
+    } else if (menuData.modules.length > 0) {
+      // Default to first available module
+      const firstModule = menuData.modules[0];
+      setSelectedModule(firstModule);
+      localStorage.setItem("selectedModule", firstModule);
     }
-  }, []);
+  }, [menuData.modules]);
 
-  // Handle scroll for header fixed state (enhanced functionality)
   useEffect(() => {
     const handleScroll = () => {
       setHeaderFixed(window.scrollY > 50);
     };
-
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleModuleClick = (moduleName: string) => {
-    setSelectedModule(moduleName);
-    localStorage.setItem("selectedModule", moduleName);
+  const handleModuleChange = (module: string) => {
+    setSelectedModule(module);
+    localStorage.setItem("selectedModule", module);
   };
 
   const toggleSidebar = () => {
@@ -93,87 +69,57 @@ const MainLayout: React.FC = () => {
   };
 
   return (
-    <div
-      id="main-wrapper"
-      className={cn(
-        "min-h-screen bg-background transition-all duration-300",
-        "show",
-        sidebariconHover ? "iconhover-toggle" : "",
-        sidebarOpen ? "" : "menu-toggle"
-      )}
-    >
-      {/* Mobile Navigation - Only visible on mobile */}
-      <div className="md:hidden">
+    <div className="h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 overflow-hidden">
+      {/* Mobile Layout */}
+      <div className="md:hidden h-full flex flex-col">
         <MobileNav />
-        {/* Add top padding to account for fixed mobile nav */}
-        <div className="pt-16">
-          <Outlet />
+        <div className="flex-1 overflow-y-auto pt-16">
+          <div className="p-4">
+            <Outlet key={location.pathname} />
+          </div>
         </div>
       </div>
-
-      {/* Desktop Layout - Hidden on mobile */}
-      <div className="hidden md:flex min-h-screen">
+      
+      {/* Desktop Layout */}
+      <div className="hidden md:flex h-full">
         {/* Sidebar */}
-        <div
+        <Sidebar
+          show={sidebarOpen}
+          sidebarMenuItems={menuData.sidebarItems}
+          selectedModule={selectedModule}
+        />
+        
+        {/* Main Content Area */}
+        <div 
           className={cn(
-            "transition-all duration-300 ease-in-out flex-shrink-0 border-r border-border",
-            sidebarOpen ? "w-64" : "w-16"
+            "flex-1 flex flex-col transition-all duration-300 h-full",
+            sidebarOpen ? "ml-64" : "ml-16"
           )}
         >
-          <Sidebar
-            show={sidebarOpen}
-            menuList={menuList || []}
-            selectedModule={selectedModule}
-          />
-        </div>
-
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col">
           {/* Header */}
-          <div
-            className={cn(
-              "transition-all duration-300 border-b border-border bg-card",
-              headerFixed ? "fixed top-0 right-0 z-40 shadow-lg" : "relative",
-              headerFixed && sidebarOpen ? "left-64" : headerFixed && !sidebarOpen ? "left-16" : ""
-            )}
-            style={{
-              width: headerFixed 
-                ? sidebarOpen 
-                  ? "calc(100% - 16rem)" 
-                  : "calc(100% - 4rem)"
-                : "100%"
-            }}
-          >
+          <div className="flex-shrink-0 z-20 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/60 dark:border-slate-700/60 shadow-sm">
             <Header
-              menuList={menuList || []}
-              onModuleClick={handleModuleClick}
+              headerMenuItems={menuData.headerItems}
+              onModuleChange={handleModuleChange}
             />
           </div>
-
-          {/* Content Body */}
-          <main
-            className={cn(
-              "content-body flex-1 transition-all duration-300 bg-background",
-              headerFixed ? "pt-16" : ""
-            )}
-          >
-            <div className="p-6">
-              <Outlet />
+          
+          {/* Scrollable Content */}
+          <main className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50/80 via-blue-50/40 to-purple-50/40 dark:from-slate-900/80 dark:via-slate-800/40 dark:to-slate-700/40">
+            <div className="p-6 min-h-full">
+              <div className="max-w-7xl mx-auto">
+                <Outlet key={location.pathname} />
+              </div>
             </div>
           </main>
-
-          {/* Footer */}
-          <footer className="border-t border-border bg-card p-4 text-center text-sm text-muted-foreground">
-            <p>&copy; {new Date().getFullYear()} Fleet Management System. All rights reserved.</p>
-          </footer>
         </div>
       </div>
-
-      {/* Sidebar Toggle Button for Desktop */}
+      
+      {/* Sidebar Toggle Button */}
       <button
         onClick={toggleSidebar}
         className={cn(
-          "hidden md:block fixed top-4 z-50 p-2 bg-primary text-primary-foreground rounded-r-md shadow-lg transition-all duration-300",
+          "hidden md:block fixed top-6 z-50 p-3 bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-700 dark:to-purple-700 text-white rounded-r-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105",
           sidebarOpen ? "left-64" : "left-16"
         )}
         aria-label="Toggle Sidebar"

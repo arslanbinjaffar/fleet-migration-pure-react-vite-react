@@ -29,14 +29,9 @@ import {
 } from "react-icons/fa";
 import { useState, useEffect } from "react";
 import { ReactElement } from "react";
+import type { Permission } from "../../utils/role";
 
 // Type definitions
-interface Permission {
-  module: string;
-  name: string;
-  actions: string[];
-}
-
 interface MenuChild {
   title: string;
   to: string;
@@ -402,4 +397,4 @@ export const useMenuList = (userPermissions: Permission[] = []): MenuItem[] => {
   return menuList;
 };
 
-export type { MenuItem, MenuChild, Permission };
+export type { MenuItem, MenuChild };

@@ -1,50 +1,29 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Provider } from 'react-redux';
 import { BrowserRouter } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { store } from './stores/store';
-import { setCredentials } from './stores/slices/authSlice';
+import { PersistGate } from 'redux-persist/integration/react';
+import { store, persistor } from './stores/store';
 import AppRoutes from './routes/AppRoutes';
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from './contexts/ThemeContext';
 
-// Auth initialization component
-const AuthInitializer: React.FC = () => {
-  const dispatch = useDispatch();
-
-  useEffect(() => {
-    // Check for existing authentication data in localStorage
-    const token = localStorage.getItem('token');
-    const refreshToken = localStorage.getItem('refreshToken');
-    const userData = localStorage.getItem('user');
-
-    if (token && refreshToken && userData) {
-      try {
-        const user = JSON.parse(userData);
-        dispatch(setCredentials({
-          user,
-          token,
-          refreshToken,
-        }));
-      } catch (error) {
-        console.error('Error parsing stored user data:', error);
-        // Clear invalid data
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-      }
-    }
-  }, [dispatch]);
-
-  return null;
+// Loading component for PersistGate
+const PersistLoading: React.FC = () => {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="flex flex-col items-center space-y-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <p className="text-muted-foreground">Loading application...</p>
+      </div>
+    </div>
+  );
 };
 
 // Main App Content Component
 const AppContent: React.FC = () => {
   return (
     <BrowserRouter>
-      <AuthInitializer />
       <AppRoutes />
       <Toaster 
         position="top-right"
@@ -59,9 +38,11 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <Provider store={store}>
-      <ThemeProvider defaultTheme="dark">
-        <AppContent />
-      </ThemeProvider>
+      <PersistGate loading={<PersistLoading />} persistor={persistor}>
+        <ThemeProvider defaultTheme="dark">
+          <AppContent />
+        </ThemeProvider>
+      </PersistGate>
     </Provider>
   );
 };

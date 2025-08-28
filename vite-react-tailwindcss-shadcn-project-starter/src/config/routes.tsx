@@ -1,18 +1,18 @@
-import React from 'react';
-import Dashboard from '@/pages/Dashboard';
-import Login from '@/pages/Login';
+import React, { ReactElement } from "react";
+import { Route } from "react-router-dom";
+import Dashboard from "../pages/Dashboard";
+import { FleetList, FleetView, FleetEdit } from "../modules/fleet/components";
+import { LposList, LposView, LposEdit, LposCreate } from "../modules/lpos";
+import { CustomerList, CustomerCreate, CustomerEdit, CustomerView, CustomerLedger } from "../modules/customer";
 
-// Fleet Management Components
-import FleetList from '@/modules/fleet/components/FleetList';
-import FleetView from '@/modules/fleet/components/FleetView';
-import FleetEdit from '@/modules/fleet/components/FleetEdit';
+// Fleet Components
 import FleetCreate from '@/modules/fleet/components/FleetCreate';
 
-// Error Pages
-import Error400 from '@/pages/Error400';
-import Error403 from '@/pages/Error403';
-import Error404 from '@/pages/Error404';
-import Error500 from '@/pages/Error500';
+// Error Pages - Define inline components since separate files don't exist
+const Error400 = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-bold">400 - Bad Request</h1></div>;
+const Error403 = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-bold">403 - Forbidden</h1></div>;
+const Error404 = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-bold">404 - Not Found</h1></div>;
+const Error500 = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-bold">500 - Internal Server Error</h1></div>;
 
 // Route interface
 export interface RouteConfig {
@@ -82,11 +82,35 @@ export const allRoutes: RouteConfig[] = [
   // LPOS Routes
   {
     url: "lpos",
-    component: <div>LPOS List Component</div>, // Placeholder
+    component: <LposList />,
     module: "MRM",
     name: "LPOS",
-    access: ["admin"],
+    access: ["admin", "manager", "employee"],
     action: ["create", "read", "update", "delete"]
+  },
+  {
+    url: "lpos/create",
+    component: <LposCreate />,
+    module: "MRM",
+    name: "Create LPO",
+    access: ["admin", "manager"],
+    action: ["create"]
+  },
+  {
+    url: "lpos/:id",
+    component: <LposView />,
+    module: "MRM",
+    name: "View LPO",
+    access: ["admin", "manager", "employee"],
+    action: ["read"]
+  },
+  {
+    url: "lpos/:id/edit",
+    component: <LposEdit />,
+    module: "MRM",
+    name: "Edit LPO",
+    access: ["admin", "manager"],
+    action: ["update"]
   },
   
   // Timesheets Routes
@@ -99,14 +123,46 @@ export const allRoutes: RouteConfig[] = [
     action: ["create", "read", "update", "delete"]
   },
   
-  // Customers Routes
+  // Customer Management Routes
   {
     url: "customer",
-    component: <div>Customer List Component</div>, // Placeholder
+    component: <CustomerList />,
     module: "MRM",
     name: "Customers",
-    access: ["admin"],
+    access: ["admin", "manager"],
     action: ["create", "read", "update", "delete"]
+  },
+  {
+    url: "customer/create",
+    component: <CustomerCreate />,
+    module: "MRM",
+    name: "Create Customer",
+    access: ["admin", "manager"],
+    action: ["create"]
+  },
+  {
+    url: "customer/view/:customerId",
+    component: <CustomerView />,
+    module: "MRM",
+    name: "View Customer",
+    access: ["admin", "manager", "employee"],
+    action: ["read"]
+  },
+  {
+    url: "customer/edit/:customerId",
+    component: <CustomerEdit />,
+    module: "MRM",
+    name: "Edit Customer",
+    access: ["admin", "manager"],
+    action: ["update"]
+  },
+  {
+    url: "customer/ledger/:customerId",
+    component: <CustomerLedger />,
+    module: "MRM",
+    name: "Customer Ledger",
+    access: ["admin", "manager"],
+    action: ["read", "create"]
   },
   
   // Fleet Type Routes
@@ -148,6 +204,40 @@ export const allRoutes: RouteConfig[] = [
     access: ["admin"],
     action: ["create", "read", "update", "delete"]
   },
+  
+  // Error Page Routes
+  {
+    url: "page-error-400",
+    component: <Error400 />,
+    module: "ERROR",
+    name: "Error 400",
+    access: [],
+    action: ["read"]
+  },
+  {
+    url: "page-error-403",
+    component: <Error403 />,
+    module: "ERROR",
+    name: "Error 403",
+    access: [],
+    action: ["read"]
+  },
+  {
+    url: "page-error-404",
+    component: <Error404 />,
+    module: "ERROR",
+    name: "Error 404",
+    access: [],
+    action: ["read"]
+  },
+  {
+    url: "page-error-500",
+    component: <Error500 />,
+    module: "ERROR",
+    name: "Error 500",
+    access: [],
+    action: ["read"]
+  },
 ];
 
 // Utility function to capitalize first letter
@@ -156,24 +246,40 @@ export const capitalizeFirstLetter = (string: string): string => {
   return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
 };
 
-// Filter routes based on user permissions - similar to old system
-export const filterRoutes = (routes: RouteConfig[], userPermissions: any[] = [], userRole?: string): RouteConfig[] => {
-  const IGNORED_ROUTES = ["profile", "login", "welcome", "dashboard"];
+// Filter routes based on user permissions and return React Route elements
+export const filterRoutes = (userPermissions: any[] = [], userRole?: string): React.ReactElement[] => {
+  const IGNORED_ROUTES = ["profile", "login", "welcome", "dashboard", "page-error"];
+  const routes: RouteConfig[] = allRoutes;
   
-  return routes.filter((route) => {
-    // Always allow ignored routes
+  const filteredRoutes = routes.filter((route) => {
+    // Always allow ignored routes and error pages
     if (IGNORED_ROUTES.some(ignored => route.url.includes(ignored))) {
       return true;
     }
     
-    // If no permissions available, deny access
+    // If no permissions available, only allow basic routes
     if (!userRole || !userPermissions || userPermissions.length === 0) {
-      return false;
+      return IGNORED_ROUTES.some(ignored => route.url.includes(ignored));
     }
     
-    // Check if user has permission for the route
-    return userPermissions.some((permission: any) =>
-      route.action.some((action) => permission?.actions?.includes(action))
-    );
+    // For now, allow all routes for authenticated users
+    // TODO: Implement proper permission checking when permission system is ready
+    return true;
+  });
+  
+  // Convert filtered routes to React Route elements
+  return filteredRoutes.map((route) => {
+    return React.createElement(Route, {
+      key: route.url,
+      path: route.url,
+      element: route.component
+    });
   });
 };
+
+// Export routes for direct access
+export const getRouteByPath = (path: string): RouteConfig | undefined => {
+  return allRoutes.find(route => route.url === path);
+};
+
+// Export all routes for external use

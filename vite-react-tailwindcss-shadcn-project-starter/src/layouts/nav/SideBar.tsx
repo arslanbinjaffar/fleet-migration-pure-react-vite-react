@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { NavLink } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { selectCurrentUser } from "../../stores/slices/authSlice";
 import { useTheme } from "../../contexts/ThemeContext";
@@ -11,162 +11,174 @@ import {
   CollapsibleTrigger,
 } from "../../components/ui/collapsible";
 import { Button } from "../../components/ui/button";
+import type { AuthUser } from "../../utils/role";
+import type { MenuItemConfig } from "../../config/menuConfig.tsx";
 
-// Types
 interface SidebarProps {
   show: boolean;
-  menuList: Array<{
-    module: string;
-    iconStyle: React.ReactNode;
-    title: string;
-    content?: Array<{
-      to: string;
-      title: string;
-    }>;
-    to?: string;
-  }>;
+  sidebarMenuItems: MenuItemConfig[];
   selectedModule: string;
 }
 
-interface UserRole {
-  roleName: string;
-  permissions: string[];
-}
-
-interface AuthUser {
-  email?: string;
-  avatar?: string;
-  Role?: UserRole;
-  [key: string]: any;
-}
-
-const Sidebar: React.FC<SidebarProps> = ({ show, menuList, selectedModule }) => {
-  const location = useLocation();
-  const navigate = useNavigate();
+const Sidebar: React.FC<SidebarProps> = ({ show, sidebarMenuItems, selectedModule }) => {
   const [manuallyOpenMenus, setManuallyOpenMenus] = useState<Record<string, boolean>>({});
   const [iconHover, setIconHover] = useState(false);
   const user = useSelector(selectCurrentUser) as AuthUser | null;
-  const role = user?.Role?.roleName?.toLowerCase() || "administrative";
+  const role = user?.Role?.roleName?.toLowerCase() || "admin";
   const { theme } = useTheme();
 
-  // Initialize open menus based on selectedModule and ensure first module is opened by default
+  // Define the desired order for HRM module items (groups and standalone)
+  const hrmItemOrder = ["payroll", "shift-type", "loans", "leave", "attendance", "employee", "holidays"];
+
+  // Group menu items by module for the selected module
+  const moduleMenuItems = sidebarMenuItems?.filter(item => item?.module === selectedModule && item.location === "sidebar");
+
+  // Organize items into groups and standalone items
+  const organizedItems = React.useMemo(() => {
+    const groups: Record<string, MenuItemConfig[]> = {};
+    const standalone: MenuItemConfig[] = [];
+    const groupHeaders: Record<string, MenuItemConfig> = {};
+
+    // Separate items into groups and standalone, ensuring no duplication
+    moduleMenuItems.forEach(item => {
+      if (item.isGroupHeader) {
+        groupHeaders[item.group!] = item;
+        groups[item.group!] = [];
+      } else if (item.group) {
+        if (!groups[item.group]) {
+          groups[item.group] = [];
+        }
+        groups[item.group].push(item);
+      } else {
+        standalone.push(item);
+      }
+    });
+
+    // For HRM module, sort both groups and standalone items according to hrmItemOrder
+    if (selectedModule === "HRM") {
+      const sortedItems: MenuItemConfig[] = [];
+      const processedKeys = new Set<string>();
+
+      // Process items in the order specified by hrmItemOrder
+      hrmItemOrder.forEach(key => {
+        // Check for group header
+        const groupHeader = Object.values(groupHeaders).find(header => header.group === key);
+        if (groupHeader && groups[key]) {
+          sortedItems.push(groupHeader);
+          sortedItems.push(...groups[key]);
+          processedKeys.add(key);
+        }
+        // Check for standalone item
+        const standaloneItem = standalone.find(item => item.key === key);
+        if (standaloneItem) {
+          sortedItems.push(standaloneItem);
+          processedKeys.add(key);
+        }
+      });
+
+      // Add any remaining groups not in hrmItemOrder
+      Object.entries(groups).forEach(([groupKey, groupItems]) => {
+        if (!processedKeys.has(groupKey) && groupHeaders[groupKey]) {
+          sortedItems.push(groupHeaders[groupKey]);
+          sortedItems.push(...groupItems);
+        }
+      });
+
+      // Add any remaining standalone items not in hrmItemOrder
+      standalone.forEach(item => {
+        if (!processedKeys.has(item.key)) {
+          sortedItems.push(item);
+        }
+      });
+
+      return { groups, standalone, groupHeaders, sortedItems };
+    }
+
+    // For non-HRM modules, return groups and standalone as is
+    return { groups, standalone, groupHeaders, sortedItems: [...standalone, ...Object.entries(groups).flatMap(([groupKey, groupItems]) => [groupHeaders[groupKey], ...groupItems]).filter(Boolean)] };
+  }, [moduleMenuItems, selectedModule]);
+
+  // Initialize open menus based on selectedModule
   useEffect(() => {
     const storedModule = localStorage.getItem("selectedModule");
-    const moduleGroups = menuList?.filter(item => item.module === selectedModule);
-    
-    // Set the first module to be opened by default if no stored preference
-    if (moduleGroups && moduleGroups.length > 0) {
-      const firstModuleTitle = moduleGroups[0].title;
-      
-      setManuallyOpenMenus(prev => {
-        const newState = { ...prev };
-        
-        // If there's a stored module preference, use it
-        if (storedModule && menuList.some(group => group.title === storedModule)) {
-          newState[storedModule] = true;
-        } else {
-          // Otherwise, open the first module by default
-          newState[firstModuleTitle] = true;
-        }
-        
-        return newState;
-      });
-    }
-  }, [selectedModule, menuList]);
-
-  const handleModuleClick = (moduleTitle: string) => {
-    if (menuList.some(group => group.title === moduleTitle)) {
-      localStorage.setItem("selectedModule", moduleTitle);
+    if (storedModule) {
       setManuallyOpenMenus(prev => ({
         ...prev,
-        [moduleTitle]: !prev[moduleTitle],
+        [storedModule]: true,
       }));
     }
+  }, [selectedModule]);
+
+  const handleGroupToggle = (groupKey: string) => {
+    setManuallyOpenMenus(prev => ({
+      ...prev,
+      [groupKey]: !prev[groupKey],
+    }));
   };
-
-  // Filter groups for the selected module
-  const moduleGroups = useMemo(
-    () => menuList?.filter(item => item.module === selectedModule),
-    [menuList, selectedModule]
-  );
-
-  // Function to check if a path is active
-  const isActive = (path?: string) => {
-    if (!path) return false;
-    const fullPath = `/${role}/${path}`;
-    return (
-      location.pathname === fullPath ||
-      location.pathname.startsWith(`${fullPath}/`)
-    );
-  };
-
-  // Handle navigation with error handling
-  const handleNavigation = (path: string) => {
-    const targetPath = `/${role}/${path}`;
-    console.log(`Navigating to: ${targetPath}`);
-    navigate(targetPath, { replace: false });
-  };
-
-  // Debug state and navigation
-  useEffect(() => {
-    console.log({
-      pathname: location.pathname,
-      selectedModule,
-      moduleGroups,
-      manuallyOpenMenus,
-    });
-  }, [location.pathname, selectedModule, moduleGroups, manuallyOpenMenus]);
 
   return (
     <div
       onMouseEnter={() => setIconHover(true)}
       onMouseLeave={() => setIconHover(false)}
       className={cn(
-        "min-h-screen text-white transition-all duration-300 border-r border-border",
-        "bg-gradient-to-b from-[#07292A] to-[#115456]",
+        "fixed left-0 top-0 h-screen transition-all duration-300 border-r z-30",
+        "bg-gradient-to-b from-slate-900 via-blue-900/20 to-purple-900/20 dark:from-slate-950 dark:via-blue-950/30 dark:to-purple-950/30",
+        "border-slate-700/60 dark:border-slate-800/60",
+        "shadow-xl shadow-blue-900/10 dark:shadow-black/50",
         show ? "w-64" : "w-16",
         iconHover && !show ? "w-64" : ""
       )}
     >
-      <div className="px-2 py-3 h-full overflow-y-auto">
-        <nav className="flex flex-col space-y-1">
-          {moduleGroups?.map((group, index) => {
-            const hasActiveChild =
-              group.content &&
-              Array.isArray(group.content) &&
-              group.content.some(child => group.content!.length > 1 && isActive(child?.to));
+      {/* Logo Section */}
+      <div className={cn(
+        "flex items-center justify-center py-6 border-b border-slate-700/40 dark:border-slate-800/40",
+        "bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-700 dark:to-purple-700 shadow-lg shadow-blue-500/20 dark:shadow-blue-700/20"
+      )}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center">
+            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+          </div>
+          <span className={cn(
+            "text-white font-bold text-lg transition-opacity duration-200",
+            (!show && !iconHover) ? "opacity-0 w-0" : "opacity-100"
+          )}>
+            FleetMS
+          </span>
+        </div>
+      </div>
 
-            const isOpen = manuallyOpenMenus[group.title] || hasActiveChild;
-            
-            // Check if the group is active (for single child, parent is active if the child's route is active)
-            const isGroupActive =
-              group.content && Array.isArray(group.content) && group.content.length === 1
-                ? isActive(group.content[0]?.to)
-                : hasActiveChild;
+      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-blue-600/50 dark:scrollbar-thumb-blue-700/50 scrollbar-track-transparent">
+        <nav className="flex flex-col space-y-1 p-3">
+          {organizedItems.sortedItems.map((item, index) => {
+            if (item.isGroupHeader) {
+              const groupKey = item.group!;
+              const groupItems = organizedItems.groups[groupKey] || [];
+              const isOpen = manuallyOpenMenus[groupKey];
 
-            const hasMultipleChildren = group.content && Array.isArray(group.content) && group.content.length > 1;
+              if (groupItems.length === 0) return null;
 
-            return (
-              <div key={group.title || index}>
-                {hasMultipleChildren ? (
-                  <Collapsible open={isOpen} onOpenChange={() => handleModuleClick(group.title)}>
+              return (
+                <div key={item.key} className="mt-2">
+                  <Collapsible open={isOpen} onOpenChange={() => handleGroupToggle(groupKey)}>
                     <CollapsibleTrigger asChild>
                       <Button
                         variant="ghost"
                         className={cn(
-                          "w-full justify-between text-white hover:bg-white/10 px-3 py-2 mt-2 h-auto",
-                          isGroupActive && "bg-primary text-white font-bold"
+                          "w-full justify-between text-slate-200 dark:text-slate-300 hover:bg-blue-800/30 dark:hover:bg-blue-900/30 px-3 py-3 h-auto rounded-lg transition-all duration-200",
+                          "hover:text-white dark:hover:text-white hover:shadow-md hover:shadow-blue-500/10 dark:hover:shadow-blue-700/10"
                         )}
                       >
                         <span className="flex items-center gap-2">
                           <span className="flex items-center justify-center w-5 h-5">
-                            {group.iconStyle}
+                            {item.icon}
                           </span>
                           <span className={cn(
                             "transition-opacity duration-200",
                             (!show && !iconHover) ? "opacity-0 w-0" : "opacity-100"
                           )}>
-                            {group.title}
+                            {item.title}
                           </span>
                         </span>
                         <span className={cn(
@@ -177,69 +189,59 @@ const Sidebar: React.FC<SidebarProps> = ({ show, menuList, selectedModule }) => 
                         </span>
                       </Button>
                     </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-1">
-                      {group.content?.map((subModule, subIndex) => (
-                        <Button
-                          key={`${group.title}-${subIndex}`}
-                          variant="ghost"
-                          asChild
-                          className={cn(
-                            "w-full justify-start px-4 py-2 text-left h-auto",
-                            isActive(subModule?.to)
-                              ? "bg-primary text-white font-bold"
-                              : "text-gray-300 hover:bg-white/5 hover:text-white"
-                          )}
+                    <CollapsibleContent className="space-y-1 ml-4">
+                      {groupItems.map((menuItem) => (
+                        <NavLink
+                          key={menuItem.key}
+                          to={`/${role}/${menuItem.path}`}
+                          className={({ isActive }) =>
+                            cn(
+                              "flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-slate-300 dark:text-slate-400 hover:bg-blue-800/20 dark:hover:bg-blue-900/20 hover:text-white dark:hover:text-white transition-all duration-200 no-underline",
+                              isActive && "bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-700 dark:to-purple-700 text-white font-semibold shadow-lg shadow-blue-500/25 dark:shadow-blue-700/25"
+                            )
+                          }
                         >
-                          <Link
-                            to={`/${role}/${subModule?.to}`}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handleNavigation(subModule?.to);
-                            }}
-                          >
-                            <span className={cn(
-                              "ml-2 transition-opacity duration-200",
-                              (!show && !iconHover) ? "opacity-0" : "opacity-100"
-                            )}>
-                              {subModule?.title}
-                            </span>
-                          </Link>
-                        </Button>
+                          <span className="flex items-center justify-center w-4 h-4">
+                            {menuItem.icon}
+                          </span>
+                          <span className={cn(
+                            "transition-opacity duration-200 text-sm",
+                            (!show && !iconHover) ? "opacity-0 w-0" : "opacity-100"
+                          )}>
+                            {menuItem.title}
+                          </span>
+                        </NavLink>
                       ))}
                     </CollapsibleContent>
                   </Collapsible>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    asChild
-                    className={cn(
-                      "w-full justify-start text-white hover:bg-white/10 px-3 py-2 mt-2 h-auto",
-                      isGroupActive && "bg-primary text-white font-bold"
-                    )}
-                  >
-                    <Link
-                      to={group.content?.[0]?.to ? `/${role}/${group.content[0].to}` : "#"}
-                      onClick={(e) => {
-                        if (group.content?.[0]?.to) {
-                          e.preventDefault();
-                          handleNavigation(group.content[0].to);
-                        }
-                      }}
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className="flex items-center justify-center w-5 h-5">
-                          {group.iconStyle}
-                        </span>
-                        <span className={cn(
-                          "transition-opacity duration-200",
-                          (!show && !iconHover) ? "opacity-0" : "opacity-100"
-                        )}>
-                          {group.title}
-                        </span>
-                      </span>
-                    </Link>
-                  </Button>
-                )}
+                </div>
+              );
+            }
+
+            // Only render standalone items that don't belong to any group
+            if (item.group) return null;
+
+            return (
+              <div key={item.key}>
+                <NavLink
+                  to={`/${role}/${item.path}`}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-3 w-full px-3 py-3 mt-1 rounded-lg text-slate-200 dark:text-slate-300 hover:bg-blue-800/30 dark:hover:bg-blue-900/30 hover:text-white dark:hover:text-white transition-all duration-200 no-underline hover:shadow-md hover:shadow-blue-500/10 dark:hover:shadow-blue-700/10",
+                      isActive && "bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-700 dark:to-purple-700 text-white font-semibold shadow-lg shadow-blue-500/25 dark:shadow-blue-700/25"
+                    )
+                  }
+                >
+                  <span className="flex items-center justify-center w-5 h-5">
+                    {item.icon}
+                  </span>
+                  <span className={cn(
+                    "transition-opacity duration-200",
+                    (!show && !iconHover) ? "opacity-0 w-0" : "opacity-100"
+                  )}>
+                    {item.title}
+                  </span>
+                </NavLink>
               </div>
             );
           })}

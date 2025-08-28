@@ -54,11 +54,7 @@ import {
 } from '../utils';
 import { FLEET_SECTIONS, FLEET_SELECT_OPTIONS } from '../constants';
 import { fleetSchema } from '../schemas/fleetSchema';
-import type { FleetAttachment, FleetSticker } from '../types';
-
-interface FleetFormData {
-  [key: string]: any;
-}
+import type { FleetAttachment, FleetSticker, FleetFormData } from '../types';
 
 const FleetCreate: React.FC = () => {
   const navigate = useNavigate();
@@ -80,7 +76,7 @@ const FleetCreate: React.FC = () => {
       ownerName: '',
       ownerID: '',
       nationality: '',
-      hourlyRate:0,
+      hourlyRate: undefined,
       firstRegistrationDate: '',
       registrationRenewalDate: '',
       registrationExpiryDate: '',
@@ -91,10 +87,10 @@ const FleetCreate: React.FC = () => {
       madeIn: '',
       productionDate: '',
       shape: '',
-      noOfCylinders: '',
-      numberOfDoors: '',
-      weight: '',
-      grossWeight: '',
+      noOfCylinders: undefined,
+      numberOfDoors: undefined,
+      weight: undefined,
+      grossWeight: undefined,
       color: '',
       subColor: '',
       chassisNumber: '',
@@ -128,7 +124,12 @@ const FleetCreate: React.FC = () => {
       Object.keys(data).forEach((key) => {
         if (key !== 'fahesReport' && key !== 'fahesReportUrl') {
           if (isNumberField(key)) {
-            formData.append(key, data[key] ? parseFloat(data[key]).toString() : '');
+            const numValue = data[key];
+            if (numValue !== undefined && numValue !== null && numValue !== '') {
+              formData.append(key, typeof numValue === 'string' ? parseFloat(numValue).toString() : numValue.toString());
+            } else {
+              formData.append(key, '');
+            }
           } else {
             formData.append(key, data[key] || '');
           }
@@ -354,6 +355,15 @@ const FleetCreate: React.FC = () => {
                                 {...field}
                                 type={isDateField(fieldName) ? 'date' : isNumberField(fieldName) ? 'number' : 'text'}
                                 placeholder={`Enter ${getDisplayLabel(fieldName).toLowerCase()}`}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  if (isNumberField(fieldName)) {
+                                    field.onChange(value === '' ? undefined : parseFloat(value) || 0);
+                                  } else {
+                                    field.onChange(value);
+                                  }
+                                }}
+                                value={field.value ?? ''}
                               />
                             )}
                           </FormControl>

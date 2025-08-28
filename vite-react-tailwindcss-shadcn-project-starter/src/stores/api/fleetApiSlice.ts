@@ -45,7 +45,7 @@ export const fleetApiSlice = apiSlice.injectEndpoints({
     // Create new fleet
     createFleet: builder.mutation<FleetApiResponse, FormData>({
       query: (fleetData) => ({
-        url: '/fleet/create',
+        url: '/fleet',
         method: 'POST',
         body: fleetData,
         formData: true,

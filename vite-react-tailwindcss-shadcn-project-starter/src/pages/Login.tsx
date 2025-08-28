@@ -11,6 +11,7 @@ import { useAppDispatch, useAppSelector } from '@/stores/hooks';
 import { setCredentials, setLoading, selectAuthLoading, selectAuthError, setError } from '@/stores/slices/authSlice';
 import { useLoginMutation } from '@/stores/api/authApiSlice';
 import { authNotifications } from '@/utils/notifications';
+import { cn } from '@/lib/utils';
 import type { LoginRequest } from '@/types';
 
 const Login: React.FC = () => {
@@ -156,32 +157,22 @@ const Login: React.FC = () => {
   }, []);
 
   return (
-    <div 
-      className="min-h-screen flex items-center justify-center p-4 relative"
-      style={{
-        background: `var(--color-bg)`,
-        backgroundImage: 'url("/rainbow-bg.jpg")',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundBlendMode: 'overlay'
-      }}
-    >
+    <div className="min-h-screen flex items-center justify-center p-4 relative bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800">
       {/* Theme Toggle Button */}
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
       <div className="w-full max-w-md">
-        <Card className="shadow-2xl border-0" style={{backgroundColor: 'var(--color-card)', boxShadow: `0 25px 50px -12px var(--color-shadow)`}}>
+        <Card className="shadow-2xl border border-slate-200/50 dark:border-slate-700/50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl">
           <CardHeader className="space-y-1 text-center">
-            <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{background: `linear-gradient(135deg, var(--color-primary), var(--color-secondary), var(--color-accent))`}}>
-                <User className="w-8 h-8 text-white" />
+            <div className="flex justify-center mb-6">
+              <div className="w-20 h-20 rounded-2xl flex items-center justify-center bg-gradient-to-br from-blue-600 via-purple-600 to-blue-700 dark:from-blue-700 dark:via-purple-700 dark:to-blue-800 shadow-lg shadow-blue-500/25 dark:shadow-blue-700/25">
+                <User className="w-10 h-10 text-white" />
               </div>
             </div>
-            <CardTitle className="text-2xl font-bold text-center" style={{ color: 'var(--color-text)' }}>Welcome Back</CardTitle>
-            <CardDescription className="text-center" style={{ color: 'var(--color-text-secondary)' }}>
-              Login page allows users to enter credentials for authentication
+            <CardTitle className="text-3xl font-bold text-center text-slate-900 dark:text-slate-100 mb-2">Welcome Back</CardTitle>
+            <CardDescription className="text-center text-slate-600 dark:text-slate-400 text-base">
+              Sign in to access your Fleet Management System
             </CardDescription>
           </CardHeader>
           
@@ -189,7 +180,7 @@ const Login: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Email Field */}
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                <Label htmlFor="email" className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                   Email Address
                 </Label>
                 <div className="relative">
@@ -201,13 +192,10 @@ const Login: React.FC = () => {
                     placeholder="Enter your email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className={`pl-10 ${
-                      validationErrors.email ? 'border-destructive' : ''
-                    }`}
-                    style={{
-                      borderColor: validationErrors.email ? undefined : 'var(--color-border)',
-                      backgroundColor: 'var(--color-input)'
-                    }}
+                    className={cn(
+                      "pl-10 h-12 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 transition-all duration-200",
+                      validationErrors.email && "border-red-500 dark:border-red-400 focus:border-red-500 dark:focus:border-red-400 focus:ring-red-500/20 dark:focus:ring-red-400/20"
+                    )}
                     disabled={isLoading}
                   />
                 </div>
@@ -218,7 +206,7 @@ const Login: React.FC = () => {
 
               {/* Password Field */}
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                <Label htmlFor="password" className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                   Password
                 </Label>
                 <div className="relative">
@@ -230,13 +218,10 @@ const Login: React.FC = () => {
                     placeholder="Enter your password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    className={`pl-10 pr-10 ${
-                      validationErrors.password ? 'border-destructive' : ''
-                    }`}
-                    style={{
-                      borderColor: validationErrors.password ? undefined : 'var(--color-border)',
-                      backgroundColor: 'var(--color-input)'
-                    }}
+                    className={cn(
+                      "pl-10 pr-10 h-12 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 transition-all duration-200",
+                      validationErrors.password && "border-red-500 dark:border-red-400 focus:border-red-500 dark:focus:border-red-400 focus:ring-red-500/20 dark:focus:ring-red-400/20"
+                    )}
                     disabled={isLoading}
                   />
                   <button
@@ -263,8 +248,7 @@ const Login: React.FC = () => {
                 />
                 <Label
                   htmlFor="remember"
-                  className="text-sm cursor-pointer"
-                  style={{ color: 'var(--color-text-secondary)' }}
+                  className="text-sm cursor-pointer text-slate-600 dark:text-slate-400"
                 >
                   Remember me
                 </Label>
@@ -272,18 +256,15 @@ const Login: React.FC = () => {
 
               {/* Error Message */}
               {error && (
-                <div className="p-3 rounded-md" style={{ backgroundColor: 'var(--color-error-bg)', border: '1px solid var(--color-error-border)' }}>
-                  <p className="text-sm" style={{ color: 'var(--color-error)' }}>{error}</p>
+                <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800">
+                  <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
                 </div>
               )}
 
               {/* Submit Button */}
               <Button
                 type="submit"
-                className="w-full text-white font-medium py-2 px-4 rounded-md transition-opacity hover:opacity-90"
-                style={{
-                  background: `linear-gradient(135deg, var(--color-primary), var(--color-secondary), var(--color-accent))`
-                }}
+                className="w-full h-12 text-white font-semibold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-700 dark:to-purple-700 hover:from-blue-700 hover:to-purple-700 dark:hover:from-blue-800 dark:hover:to-purple-800 shadow-lg shadow-blue-500/25 dark:shadow-blue-700/25 transition-all duration-200 hover:shadow-xl hover:scale-[1.02]"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -298,15 +279,10 @@ const Login: React.FC = () => {
             </form>
 
             {/* Footer Links */}
-            <div className="mt-6 text-center space-y-2">
+            <div className="mt-6 text-center space-y-3">
               <button
                 type="button"
-                className="text-sm transition-colors"
-                style={{
-                  color: 'var(--color-primary)'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-secondary)'}
-                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-primary)'}
+                className="text-sm text-blue-600 dark:text-blue-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors font-medium"
                 onClick={() => {
                   // TODO: Implement forgot password functionality
                   console.log('Forgot password clicked');
@@ -315,16 +291,11 @@ const Login: React.FC = () => {
                 Forgot your password?
               </button>
               
-              <div className="text-sm text-muted-foreground">
+              <div className="text-sm text-slate-600 dark:text-slate-400">
                 Don't have an account?{' '}
                 <button
                   type="button"
-                  className="transition-colors font-medium"
-                  style={{
-                    color: 'var(--color-primary)'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-secondary)'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-primary)'}
+                  className="text-blue-600 dark:text-blue-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors font-semibold"
                   onClick={() => {
                     // TODO: Implement registration navigation
                     console.log('Sign up clicked');

@@ -68,19 +68,19 @@ interface FleetFormData {
 }
 
 const FleetEdit: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { fleetId } = useParams<{ fleetId: string }>();
   const navigate = useNavigate();
   const user = useSelector(selectCurrentUser);
   const [attachments, setAttachments] = useState<FleetAttachment[]>([]);
   const [stickers, setStickers] = useState<FleetSticker[]>([]);
   const [downloadingFiles, setDownloadingFiles] = useState<Record<string, boolean>>({});
   const [isAddingNewSticker, setIsAddingNewSticker] = useState(false);
-
+  console.log(fleetId,"id")
   const {
     data: fleetResponse,
     isLoading: isLoadingFleet,
     error: fleetError,
-  } = useGetFleetByIdQuery(id!, { skip: !id });
+  } = useGetFleetByIdQuery(fleetId!, { skip: !fleetId });
 
   const { data: fleetTypesResponse, isLoading: isLoadingTypes } = useGetFleetTypesQuery();
   const [updateFleet, { isLoading: isUpdating }] = useUpdateFleetMutation();

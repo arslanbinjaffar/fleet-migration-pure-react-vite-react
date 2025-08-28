@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '../store';
 import type { AuthUser } from '../api/authApiSlice';
-import { authPersistence } from '../middleware/persistenceMiddleware';
+// import { authPersistence } from '../middleware/persistenceMiddleware';
 
 // Auth state interface
 export interface AuthState {
@@ -91,53 +91,37 @@ const authSlice = createSlice({
       state.isLoading = false;
       state.error = null;
       state.sessionExpired = false;
-      state.loginTime = localStorage.getItem('loginTime');
+      
+      // Set login time
+      const newLoginTime = new Date();
+      newLoginTime.setHours(newLoginTime.getHours() + 8);
+      state.loginTime = newLoginTime.toISOString();
     },
     
-    // Set credentials from localStorage (on app init)
-    // Initialize auth state from localStorage
+    // Initialize auth state (handled by redux-persist)
     initializeFromStorage: (state) => {
-      const storedAuthState = authPersistence.loadAuthState();
-      
-      if (storedAuthState) {
-        if (storedAuthState.sessionExpired) {
-          state.sessionExpired = true;
-          state.isAuthenticated = false;
-        } else {
-          Object.assign(state, storedAuthState);
-        }
-      }
+      // Redux-persist handles state restoration automatically
+      // This action is kept for backward compatibility
     },
 
     // Legacy method - kept for backward compatibility
     setCredentialsFromStorage: (state) => {
-      // Use the new initialization method
-      const storedAuthState = authPersistence.loadAuthState();
-      
-      if (storedAuthState) {
-        if (storedAuthState.sessionExpired) {
-          state.sessionExpired = true;
-          state.isAuthenticated = false;
-        } else {
-          Object.assign(state, storedAuthState);
-        }
-      }
+      // Redux-persist handles state restoration automatically
+      // This action is kept for backward compatibility
     },
     
     // Logout
     logout: (state) => {
       // Reset state to initial values
       Object.assign(state, initialState);
-      
-      // Clear localStorage using persistence utility
-      authPersistence.clearAuthState();
+      // Redux-persist will handle clearing persisted state
     },
     
     // Update user profile
     updateProfile: (state, action: PayloadAction<Partial<AuthUser>>) => {
       if (state.user) {
         state.user = { ...state.user, ...action.payload };
-        localStorage.setItem('user', JSON.stringify(state.user));
+        // Redux-persist will handle persistence automatically
       }
     },
     
@@ -166,7 +150,7 @@ const authSlice = createSlice({
       const newLoginTime = new Date();
       newLoginTime.setHours(newLoginTime.getHours() + 8);
       state.loginTime = newLoginTime.toISOString();
-      localStorage.setItem('loginTime', state.loginTime);
+      // Redux-persist will handle persistence automatically
     },
   },
 });

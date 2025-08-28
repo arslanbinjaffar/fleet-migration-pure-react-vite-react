@@ -12,8 +12,8 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useSelector } from "react-redux";
-import { selectCurrentUser } from "../../stores/slices/authSlice";
+import { useSelector, useDispatch } from "react-redux";
+import { selectCurrentUser, logout } from "../../stores/slices/authSlice";
 import { useTheme } from "../../contexts/ThemeContext";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -39,6 +39,7 @@ import {
   CollapsibleTrigger,
 } from "../../components/ui/collapsible";
 import { cn } from "../../lib/utils";
+import type { AuthUser } from "../../utils/role";
 
 // Types
 interface MenuGroup {
@@ -68,18 +69,6 @@ interface MainModule {
       title: string;
     }>;
   }>;
-}
-
-interface UserRole {
-  roleName: string;
-  permissions: string[];
-}
-
-interface AuthUser {
-  email?: string;
-  avatar?: string;
-  Role?: UserRole;
-  [key: string]: any;
 }
 
 interface MenuItemProps {
@@ -314,6 +303,7 @@ const MobileNav: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = useSelector(selectCurrentUser) as AuthUser | null;
+  const dispatch = useDispatch();
   const role = user?.Role?.roleName?.toLowerCase() || "admin";
   const userPermissions = user?.Role?.permissions || [];
   const menuList = useMenuList(userPermissions);
@@ -371,8 +361,12 @@ const MobileNav: React.FC = () => {
   };
 
   const handleLogout = () => {
-    // Placeholder for logout functionality
-    console.log("Logging out...");
+    // Dispatch logout action to clear Redux state
+    dispatch(logout());
+    // Clear selected module from localStorage (not persisted by redux-persist)
+    localStorage.removeItem("selectedModule");
+    // Navigate to login page
+    navigate("/", { replace: true });
   };
 
   return (
@@ -439,10 +433,10 @@ const MobileNav: React.FC = () => {
           className="flex items-center cursor-pointer"
           onClick={() => {
             setOpen(false);
-            navigate(`/${role}`);
+            navigate(`/${role}/dashboard`);
           }}
         >
-          <span className="text-lg font-bold">Fleet</span>
+          <span className="text-lg font-bold">Fleet Management</span>
         </div>
 
         {/* Right side icons */}
