@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { selectCurrentUser } from '../../../stores/slices/authSlice';
+import useRoleNavigation from '../../../utils/useNavigation';
+import { NavigationPaths } from '../../../utils/navigationPaths';
 import {
   ArrowLeft,
   Edit,
@@ -22,6 +25,10 @@ import {
   CheckCircle,
   Clock,
   XCircle,
+  ZoomIn,
+  ZoomOut,
+  RotateCw,
+  AlertCircle,
 } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,9 +56,12 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 
-import { selectCurrentUser } from '../../../stores/slices/authSlice';
+import {
+  useGetLPOByIdQuery,
+  useDeleteLPOMutation,
+  useStopLPOMutation,
+} from '../../../stores/api/lposApiSlice';
 import { LPO, Fleet } from '../types';
-import { PERMISSIONS } from '../constants';
 import {
   formatDate,
   formatDateTime,
@@ -65,163 +75,136 @@ import {
   isLPOStoppable,
   getErrorMessage,
 } from '../utils';
-import {usePermissionSet } from '../../../utils/role';
+import {
+  EditButton,
+  DeleteButton,
+  ViewButton,
+  PermissionModule,
+  ExportButton,
+  ManageButton,
+} from '../../../components/permissions';
+import { useModulePermissions } from '../../../contexts/PermissionContext';
+import LpoPdfView from './LpoPdfView';
 
-// Mock API functions - replace with actual API calls
-const fetchLPO = async (lpoId: string): Promise<{ lpo: LPO; fleets: Fleet[] }> => {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      // Mock data - replace with actual API call
-      const mockLPO: LPO = {
-        lpoId,
-        lpoNumber: 'LPO-2024-001',
-        fleetIds: ['fleet-1', 'fleet-2'],
-        fleetHourlyRates: [
-          { fleetId: 'fleet-1', hourlyRate: 25.00 },
-          { fleetId: 'fleet-2', hourlyRate: 30.00 },
-        ],
-        siteProjectId: 'project-1',
-        purpose: 'Transportation services for construction project',
-        lpoStartDate: '2024-01-15',
-        lpoEndDate: '2024-02-15',
-        referenceNumber: 'REF-2024-001',
-        status: 'Approved',
-        customerId: 'customer-1',
-        designation: 'Project Manager',
-        address: '123 Construction Site, Dubai, UAE',
-        termsAndCondition: 'Standard terms and conditions apply...',
-        createdAt: '2024-01-10T10:00:00Z',
-        updatedAt: '2024-01-12T15:30:00Z',
-        customer: {
-          customerId: 'customer-1',
-          firstname: 'John',
-          lastname: 'Doe',
-          email: 'john.doe@example.com',
-          phone: '+971-50-123-4567',
-          address: '456 Business District, Dubai, UAE',
-          createdAt: '2024-01-01T00:00:00Z',
-          updatedAt: '2024-01-01T00:00:00Z',
-        },
-        siteProject: {
-          siteProjectId: 'project-1',
-          projectName: 'Dubai Marina Tower',
-          mainClient: 'ABC Construction',
-          location: 'Dubai Marina, Dubai, UAE',
-          description: 'High-rise residential tower construction',
-          startDate: '2024-01-01',
-          endDate: '2024-12-31',
-          status: 'Active',
-          createdAt: '2023-12-01T00:00:00Z',
-          updatedAt: '2024-01-01T00:00:00Z',
-        },
-      };
-      
-      const mockFleets: Fleet[] = [
-        {
-          fleetId: 'fleet-1',
-          vehicleName: 'Toyota Hiace',
-          plateNumber: 'DXB-12345',
-          plateType: 'Private',
-          status: 'In Use',
-          hourlyRate: 25.00,
-          fleetType: {
-            fleetTypeId: 'type-1',
-            typeName: 'Van',
-            description: 'Passenger van',
-          },
-          createdAt: '2023-12-01T00:00:00Z',
-          updatedAt: '2024-01-01T00:00:00Z',
-        },
-        {
-          fleetId: 'fleet-2',
-          vehicleName: 'Ford Transit',
-          plateNumber: 'DXB-67890',
-          plateType: 'Commercial',
-          status: 'In Use',
-          hourlyRate: 30.00,
-          fleetType: {
-            fleetTypeId: 'type-2',
-            typeName: 'Truck',
-            description: 'Light truck',
-          },
-          createdAt: '2023-12-01T00:00:00Z',
-          updatedAt: '2024-01-01T00:00:00Z',
-        },
-      ];
-      
-      resolve({ lpo: mockLPO, fleets: mockFleets });
-    }, 1000);
-  });
-};
+// PDF Generation utility
+const generatePDF = async (lpo: LPO, fleets: Fleet[]) => {
+  // Dynamic import for html2pdf to avoid SSR issues
+  const html2pdf = (await import('html2pdf.js')).default;
+  
+  const element = document.getElementById('lpo-agreement-content');
+  if (!element) {
+    throw new Error('PDF content not found');
+  }
 
-const deleteLPO = async (lpoId: string): Promise<void> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve();
-    }, 500);
-  });
-};
+  // Apply print styles
+  element.style.color = '#000';
+  element.style.fontFamily = 'Times New Roman, serif';
 
-const stopLPO = async (lpoId: string): Promise<void> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve();
-    }, 500);
-  });
+  const options = {
+    margin: [10, 5, 0, 5],
+    filename: `LPO_${lpo.lpoNumber}_${lpo.purpose?.replace(/[^a-zA-Z0-9]/g, '_') || 'Document'}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { 
+      scale: 2,
+      useCORS: true,
+      letterRendering: true
+    },
+    jsPDF: {
+      unit: 'mm',
+      format: 'a4',
+      orientation: 'portrait',
+    },
+    pagebreak: { mode: ['css', 'legacy'] },
+  };
+
+  try {
+    const pdf = await html2pdf().set(options).from(element).toPdf().get('pdf');
+    pdf.setTextColor(0, 0, 0);
+    await pdf.save();
+    return true;
+  } catch (error) {
+    console.error('PDF generation error:', error);
+    throw error;
+  }
 };
 
 const LposView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const user = useSelector(selectCurrentUser);
+  const { roleNavigate } = useRoleNavigation();
   
-  // State
-  const [lpo, setLpo] = useState<LPO | null>(null);
-  const [fleets, setFleets] = useState<Fleet[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Modal states
+  // Local state
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [pdfZoom, setPdfZoom] = useState(100);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [stopDialogOpen, setStopDialogOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isStopping, setIsStopping] = useState(false);
+  const [showPdfPreview, setShowPdfPreview] = useState(false);
+  
+  // Permission checks using new system
+  const lposPermissions = useModulePermissions(PermissionModule.LPOS);
+  
+  // API hooks
+  const {
+    data: lpoResponse,
+    isLoading,
+    error: lpoError,
+  } = useGetLPOByIdQuery(id!, { skip: !id });
+  
+  const [deleteLPOMutation, { isLoading: isDeleting }] = useDeleteLPOMutation();
+  const [stopLPOMutation, { isLoading: isStopping }] = useStopLPOMutation();
+  
+  // Extract data from API response
+  const lpo = lpoResponse?.lpo || null;
+  const fleets = lpoResponse?.fleets || [];
+  
+  // Error handling
+  const error = lpoError ? getErrorMessage(lpoError) : null;
 
-  // Load LPO data
+  // Auto-download on mobile
   useEffect(() => {
-    if (id) {
-      loadLPO(id);
+    const isMobile = window.innerWidth <= 767;
+    if (!isLoading && lpo && isMobile) {
+      handleDownloadPDF();
     }
-  }, [id]);
+  }, [isLoading, lpo]);
 
-  const loadLPO = async (lpoId: string) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const response = await fetchLPO(lpoId);
-      setLpo(response.lpo);
-      setFleets(response.fleets);
-    } catch (error) {
-      setError(getErrorMessage(error));
-      toast.error('Failed to load LPO details');
-    } finally {
-      setIsLoading(false);
+  // Handlers
+  const handleBack = () => {
+    roleNavigate(NavigationPaths.LPO.LIST);
+  };
+
+  const handleEdit = () => {
+    if (lpo) {
+      roleNavigate(NavigationPaths.LPO.EDIT(lpo.lpoId));
     }
   };
 
-  // Handlers
+  const handleDownloadPDF = async () => {
+    if (!lpo) return;
+    
+    setIsGeneratingPDF(true);
+    try {
+      await generatePDF(lpo, fleets);
+      toast.success('PDF downloaded successfully');
+    } catch (error) {
+      toast.error('Failed to generate PDF');
+      console.error('PDF generation failed:', error);
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!lpo) return;
     
     try {
-      setIsDeleting(true);
-      await deleteLPO(lpo.lpoId);
+      await deleteLPOMutation(lpo.lpoId).unwrap();
       toast.success('LPO deleted successfully');
-      navigate('/lpos');
+      roleNavigate(NavigationPaths.LPO.LIST);
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
-      setIsDeleting(false);
       setDeleteDialogOpen(false);
     }
   };
@@ -230,14 +213,11 @@ const LposView: React.FC = () => {
     if (!lpo) return;
     
     try {
-      setIsStopping(true);
-      await stopLPO(lpo.lpoId);
-      setLpo({ ...lpo, status: 'Stopped' });
+      await stopLPOMutation(lpo.lpoId).unwrap();
       toast.success('LPO stopped successfully');
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
-      setIsStopping(false);
       setStopDialogOpen(false);
     }
   };
@@ -246,17 +226,15 @@ const LposView: React.FC = () => {
     window.print();
   };
 
-  const handleExport = () => {
-    // Implement export functionality
-    toast.success('Export functionality will be implemented');
+  const handleZoomIn = () => {
+    setPdfZoom(prev => Math.min(prev + 25, 200));
   };
 
-  // Permission checks
-  const canCreate = usePermissionSet(PERMISSIONS.CREATE_LPO);
-  const canEdit = usePermissionSet( PERMISSIONS.EDIT_LPO);
-  const canDelete = usePermissionSet( PERMISSIONS.DELETE_LPO);
-  const canStop = usePermissionSet( PERMISSIONS.STOP_LPO);
-  const canExport = usePermissionSet( PERMISSIONS.EXPORT_LPO);
+  const handleZoomOut = () => {
+    setPdfZoom(prev => Math.max(prev - 25, 50));
+  };
+
+
 
   if (isLoading) {
     return (
@@ -271,7 +249,7 @@ const LposView: React.FC = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={() => navigate('/lpos')}>
+          <Button variant="ghost" onClick={handleBack}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to LPOs
           </Button>
@@ -309,34 +287,68 @@ const LposView: React.FC = () => {
         </div>
         
         <div className="flex items-center space-x-2">
-          {canExport && (
-            <Button variant="outline" onClick={handleExport}>
-              <Download className="h-4 w-4 mr-2" />
-              Export
+          {/* PDF Controls */}
+          <div className="flex items-center gap-1 border rounded-md p-1">
+            <Button variant="ghost" size="sm" onClick={handleZoomOut} disabled={pdfZoom <= 50}>
+              <ZoomOut className="h-4 w-4" />
             </Button>
-          )}
+            <span className="text-sm px-2">{pdfZoom}%</span>
+            <Button variant="ghost" size="sm" onClick={handleZoomIn} disabled={pdfZoom >= 200}>
+              <ZoomIn className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          {/* Print and PDF actions - not permission controlled */}
+          <Button variant="outline" onClick={() => setShowPdfPreview(true)}>
+            <FileText className="h-4 w-4 mr-2" />
+            PDF Preview
+          </Button>
+          
           <Button variant="outline" onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" />
             Print
           </Button>
-          {canEdit && isLPOEditable(lpo.status) && (
-            <Button onClick={() => navigate(`/lpos/${lpo.lpoId}/edit`)}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
-          )}
-          {canStop && isLPOStoppable(lpo.status) && (
-            <Button variant="outline" onClick={() => setStopDialogOpen(true)}>
-              <StopCircle className="h-4 w-4 mr-2" />
-              Stop
-            </Button>
-          )}
-          {canDelete && (
-            <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </Button>
-          )}
+          
+          <Button 
+            variant="outline" 
+            onClick={handleDownloadPDF}
+            disabled={isGeneratingPDF}
+          >
+            {isGeneratingPDF ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4 mr-2" />
+            )}
+            {isGeneratingPDF ? 'Generating...' : 'Download PDF'}
+          </Button>
+          
+          {/* Permission-controlled actions */}
+          <EditButton 
+            module={PermissionModule.LPOS} 
+            onClick={handleEdit}
+            disabled={!isLPOEditable(lpo.status)}
+          >
+            <Edit className="h-4 w-4 mr-2" />
+            Edit LPO
+          </EditButton>
+          
+          <ManageButton 
+            module={PermissionModule.LPOS} 
+            onClick={() => setStopDialogOpen(true)}
+            disabled={!isLPOStoppable(lpo.status)}
+            variant="outline"
+          >
+            <StopCircle className="h-4 w-4 mr-2" />
+            Stop LPO
+          </ManageButton>
+          
+          <DeleteButton 
+            module={PermissionModule.LPOS} 
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete LPO
+          </DeleteButton>
         </div>
       </div>
 
@@ -365,7 +377,7 @@ const LposView: React.FC = () => {
               <Truck className="h-5 w-5 text-muted-foreground" />
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Fleets</p>
-                <p className="text-2xl font-bold">{lpo.fleetIds.length}</p>
+                <p className="text-2xl font-bold">{lpo?.fleetIds?.length}</p>
               </div>
             </div>
           </CardContent>
@@ -556,7 +568,7 @@ const LposView: React.FC = () => {
             </TableHeader>
             <TableBody>
               {fleets.map((fleet) => {
-                const hourlyRate = lpo.fleetHourlyRates.find(r => r.fleetId === fleet.fleetId)?.hourlyRate || 0;
+                const hourlyRate = lpo.fleetHourlyRates?.find(r => r.fleetId === fleet.fleetId)?.hourlyRate || 0;
                 return (
                   <TableRow key={fleet.fleetId}>
                     <TableCell className="font-medium">{fleet.vehicleName}</TableCell>
@@ -615,6 +627,134 @@ const LposView: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Hidden PDF Content for Generation */}
+      <div id="lpo-agreement-content" className="hidden print:block" style={{ fontFamily: 'Times New Roman, serif' }}>
+        {/* Header */}
+        <div className="text-center border-b pb-4 mb-6">
+          <h1 className="text-2xl font-bold mb-2">IMPRESSIVE TRADING & CONTRACTING CO.</h1>
+          <p className="text-sm">P.O. Box-30961, DOHA – QATAR</p>
+          <p className="text-sm">Mob. No.: 55855163</p>
+        </div>
+
+        {/* Reference and Registration */}
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <strong>Ref. No: <span className="underline">{lpo.referenceNumber}</span></strong>
+          </div>
+          <div>
+            <strong>REGN# 
+              {fleets.map((fleet, index) => (
+                <span key={index}>({fleet.plateNumber})</span>
+              ))}
+            </strong>
+          </div>
+        </div>
+
+        {/* Agreement Content */}
+        <div className="space-y-4 text-justify">
+          <p>
+            This Hire Agreement made and entered onto as of this{' '}
+            <strong>{formatDate(lpo.createdAt)}</strong>
+          </p>
+
+          <p className="font-bold text-center">BY AND BETWEEN</p>
+
+          <p>
+            <strong className="underline">{lpo.customer?.firstname || ''} {lpo.customer?.lastname || ''}</strong>{' '}
+            with its offices at <strong>{lpo.address}</strong>
+            <br />
+            Represented by{' '}
+            <strong className="underline">
+              {lpo.customer ? `${lpo.customer.firstname} ${lpo.customer.lastname}` : 'N/A'}, ({lpo.designation})
+            </strong>{' '}
+            hereinafter called FIRST PARTY.
+          </p>
+
+          <p className="font-bold text-center">AND</p>
+
+          <p>
+            <strong className="underline">IMPRESSIVE TRADING & CONTRACTING CO.</strong>{' '}
+            with its offices at P.O. Box-30961,{' '}
+            <strong className="underline">DOHA – QATAR</strong>
+            <br />
+            Mob. No.: 55855163
+            <br />
+            Represented by{' '}
+            <strong className="underline">MUHAMMAD YOUSAF MANZOOR, (MANAGER)</strong>{' '}
+            hereinafter called SECOND PARTY.
+          </p>
+
+          <p>
+            <strong>WHEREAS</strong> the First Party has agreed to hire,{' '}
+            {fleets.map((fleet, index) => {
+              const hourlyRate = lpo.fleetHourlyRates?.find(r => r.fleetId === fleet.fleetId)?.hourlyRate || 0;
+              return (
+                <strong key={index}>
+                  {fleet.vehicleName}-{fleet.plateNumber}@{hourlyRate}/Hr{' '}
+                </strong>
+              );
+            })}
+            W/ OPERATOR from Second Party for use{' '}
+            <strong className="underline">{lpo.purpose}</strong>
+            <br />
+            under the following conditions :-
+          </p>
+
+          {/* Terms and Conditions */}
+          <div className="border-t pt-4">
+            {lpo.termsAndCondition ? (
+              <div 
+                dangerouslySetInnerHTML={{ __html: lpo.termsAndCondition }}
+                className="prose max-w-none"
+              />
+            ) : (
+              <p>No terms and conditions specified.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t pt-6 mt-8">
+          <div className="grid grid-cols-2 gap-8">
+            <div>
+              <p className="font-bold">FIRST PARTY</p>
+              <div className="mt-8">
+                <div className="border-b border-black w-48 mb-2"></div>
+                <p className="text-sm">Signature & Stamp</p>
+              </div>
+            </div>
+            <div>
+              <p className="font-bold">SECOND PARTY</p>
+              <div className="mt-8">
+                <div className="border-b border-black w-48 mb-2"></div>
+                <p className="text-sm">Signature & Stamp</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* PDF Preview Modal */}
+      {showPdfPreview && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full h-full max-w-7xl max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-lg font-semibold">PDF Preview - {lpo.lpoNumber}</h2>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowPdfPreview(false)}
+              >
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="h-full overflow-auto">
+              <LpoPdfView lpoId={lpo.lpoId} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

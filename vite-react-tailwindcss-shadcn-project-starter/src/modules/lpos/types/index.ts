@@ -49,6 +49,8 @@ export interface SiteProject {
   status: string;
   createdAt: string;
   updatedAt: string;
+  zonalSite:string;
+  mainContractor:string
 }
 
 export interface Fleet {
@@ -58,6 +60,8 @@ export interface Fleet {
   plateType: string;
   status: FleetStatus;
   hourlyRate?: number;
+  vehicleModel?: string;
+  color?: string;
   fleetType?: FleetType;
   createdAt: string;
   updatedAt: string;

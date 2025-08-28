@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import useRoleNavigation from '../../../utils/useNavigation';
+import { NavigationPaths } from '../../../utils/navigationPaths';
 import {
   FileText,
   Plus,
@@ -122,9 +124,10 @@ import {
 } from '../../../components/permissions';
 
 const LposList: React.FC = () => {
-const navigate=useNavigate()
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const user = useSelector(selectCurrentUser);
+  const { roleNavigate } = useRoleNavigation();
   
   // Redux state
   const pagination = useSelector(selectLPOsPagination);
@@ -163,6 +166,7 @@ const navigate=useNavigate()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [stopDialogOpen, setStopDialogOpen] = useState(false);
   const [selectedLpoId, setSelectedLpoId] = useState<string | null>(null);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   // Error handling
   const error = lposError ? getErrorMessage(lposError) : null;
@@ -273,6 +277,71 @@ const navigate=useNavigate()
     }
   };
 
+  const handleDownloadPDF = async (lpo: LPO) => {
+    setIsGeneratingPDF(true);
+    try {
+      // Dynamic import for html2pdf to avoid SSR issues
+      const html2pdf = (await import('html2pdf.js')).default;
+      
+      // Create a temporary element with LPO content
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = `
+        <div style="font-family: 'Times New Roman', serif; padding: 20px; color: #000;">
+          <div style="text-align: center; border-bottom: 1px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
+            <h1 style="margin: 0; font-size: 24px;">IMPRESSIVE TRADING & CONTRACTING CO.</h1>
+            <p style="margin: 5px 0; font-size: 14px;">P.O. Box-30961, DOHA – QATAR</p>
+            <p style="margin: 5px 0; font-size: 14px;">Mob. No.: 55855163</p>
+          </div>
+          
+          <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+            <div><strong>Ref. No: <span style="text-decoration: underline;">${lpo.referenceNumber}</span></strong></div>
+            <div><strong>LPO No: ${lpo.lpoNumber}</strong></div>
+          </div>
+          
+          <p style="margin-bottom: 15px;">This Local Purchase Order is issued on <strong>${new Date().toLocaleDateString()}</strong></p>
+          
+          <p style="font-weight: bold; text-align: center; margin: 20px 0;">PURCHASE ORDER DETAILS</p>
+          
+          <p style="margin-bottom: 15px;">
+            <strong style="text-decoration: underline;">${lpo.customer?.firstname || ''} ${lpo.customer?.lastname || ''}</strong>
+            with offices at <strong>${lpo.address}</strong><br/>
+            Designation: <strong>${lpo.designation}</strong>
+          </p>
+          
+          <p style="margin-bottom: 15px;">
+            <strong>Purpose:</strong> ${lpo.purpose}<br/>
+            <strong>Duration:</strong> ${lpo.lpoStartDate} to ${lpo.lpoEndDate}<br/>
+            <strong>Status:</strong> ${lpo.status}
+          </p>
+          
+          <div style="margin-top: 30px;">
+            ${lpo.termsAndCondition || 'Standard terms and conditions apply.'}
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(tempDiv);
+      
+      const options = {
+        margin: [10, 5, 0, 5],
+        filename: `LPO_${lpo.lpoNumber}_${lpo.purpose?.replace(/[^a-zA-Z0-9]/g, '_') || 'Document'}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      };
+      
+      await html2pdf().set(options).from(tempDiv).save();
+      document.body.removeChild(tempDiv);
+      
+      toast.success('PDF downloaded successfully');
+    } catch (error) {
+      toast.error('Failed to generate PDF');
+      console.error('PDF generation failed:', error);
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
   // Permission checks using new system
   const lposPermissions = useModulePermissions(PermissionModule.LPOS);
 
@@ -300,7 +369,7 @@ const navigate=useNavigate()
             <Download className="h-4 w-4 mr-2" />
             Export
           </ExportButton>
-          <CreateButton module={PermissionModule.LPOS} onClick={() => navigate(`/${user?.Role?.roleName}/lpos/create`)}>
+          <CreateButton module={PermissionModule.LPOS} onClick={() => roleNavigate(NavigationPaths.LPO.CREATE)}>
             <Plus className="h-4 w-4 mr-2" />
             Create LPO
           </CreateButton>
@@ -391,7 +460,7 @@ const navigate=useNavigate()
               </p>
               <CreateButton module={PermissionModule.LPOS} fallback={null}>
                 {!searchQuery && (!filters.status || filters.status === 'all') && (
-                  <Button onClick={() => navigate(`/${user?.Role?.roleName}/lpos/create`)}>
+                  <Button onClick={() => roleNavigate(NavigationPaths.LPO.CREATE)}>
                     <Plus className="h-4 w-4 mr-2" />
                     Create LPO
                   </Button>
@@ -504,20 +573,55 @@ const navigate=useNavigate()
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <ActionsDropdown
-                            module={PermissionModule.LPOS}
-                            onView={() => navigate(`/${user?.Role?.roleName}/lpos/${lpo.lpoId}`)}
-                            onEdit={() => navigate(`/${user?.Role?.roleName}/lpos/${lpo.lpoId}/edit`)}
-                            onDelete={() => {
-                              setSelectedLpoId(lpo.lpoId);
-                              setDeleteDialogOpen(true);
-                            }}
-                            trigger={
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="sm">
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
-                            }
-                          />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => roleNavigate(NavigationPaths.LPO.VIEW(lpo.lpoId))}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => roleNavigate(NavigationPaths.LPO.PDF(lpo.lpoId))}>
+                                <FileText className="h-4 w-4 mr-2" />
+                                PDF Preview
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDownloadPDF(lpo)}>
+                                <Download className="h-4 w-4 mr-2" />
+                                Download PDF
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => roleNavigate(NavigationPaths.LPO.EDIT(lpo.lpoId))}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => {
+                                  setSelectedLpoId(lpo.lpoId);
+                                  setStopDialogOpen(true);
+                                }}
+                                disabled={lpo.status === 'Stopped' || lpo.status === 'Completed'}
+                              >
+                                <StopCircle className="h-4 w-4 mr-2" />
+                                Stop LPO
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => {
+                                  setSelectedLpoId(lpo.lpoId);
+                                  setDeleteDialogOpen(true);
+                                }}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     );

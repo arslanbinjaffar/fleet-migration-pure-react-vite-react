@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { selectCurrentUser } from '../../../stores/slices/authSlice';
+import useRoleNavigation from '../../../utils/useNavigation';
+import { NavigationPaths } from '../../../utils/navigationPaths';
 import {
   ArrowLeft,
   ArrowRight,
@@ -99,16 +102,65 @@ const FleetSelection: React.FC<FleetSelectionProps> = ({
   onFleetSelect,
   onHourlyRateChange,
 }) => {
+  const [selectAll, setSelectAll] = useState(false);
+  
+  // Handle select all functionality
+  const handleSelectAll = (checked: boolean) => {
+    setSelectAll(checked);
+    fleets.forEach(fleet => {
+      const isCurrentlySelected = selectedFleetIds.includes(fleet.fleetId);
+      if (checked && !isCurrentlySelected) {
+        onFleetSelect(fleet.fleetId, true);
+      } else if (!checked && isCurrentlySelected) {
+        onFleetSelect(fleet.fleetId, false);
+      }
+    });
+  };
+  
+  // Update select all state when individual selections change
+  useEffect(() => {
+    const allSelected = fleets.length > 0 && fleets.every(fleet => selectedFleetIds.includes(fleet.fleetId));
+    setSelectAll(allSelected);
+  }, [selectedFleetIds, fleets]);
+  
   return (
     <div className="space-y-4">
+      {/* Select All Option */}
+      {fleets.length > 0 && (
+        <Card className="border-dashed">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <input
+                  type="checkbox"
+                  checked={selectAll}
+                  onChange={(e) => handleSelectAll(e.target.checked)}
+                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                />
+                <div>
+                  <h4 className="font-semibold">Select All Fleets</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {fleets.length} available fleet{fleets.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+              </div>
+              <Badge variant="outline">
+                {selectedFleetIds.length} / {fleets.length} selected
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Individual Fleet Selection */}
       <div className="grid gap-4">
         {fleets.map((fleet) => {
           const isSelected = selectedFleetIds.includes(fleet.fleetId);
-          const hourlyRate = fleetHourlyRates.find(r => r.fleetId === fleet.fleetId)?.hourlyRate || 0;
+          const hourlyRate = fleetHourlyRates.find(r => r.fleetId === fleet.fleetId)?.hourlyRate || fleet.hourlyRate || 0;
           
           return (
-            <Card key={fleet.fleetId} className={`cursor-pointer transition-colors ${
-              isSelected ? 'ring-2 ring-primary' : 'hover:bg-muted/50'
+            <Card key={fleet.fleetId} className={`cursor-pointer transition-all duration-200 ${
+              isSelected ? 'ring-2 ring-primary shadow-md' : 'hover:bg-muted/50 hover:shadow-sm'
             }`}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -119,28 +171,44 @@ const FleetSelection: React.FC<FleetSelectionProps> = ({
                       onChange={(e) => onFleetSelect(fleet.fleetId, e.target.checked)}
                       className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
                     />
-                    <div>
+                    <div className="flex-1">
                       <h4 className="font-semibold">{fleet.vehicleName}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {fleet.plateNumber} • {fleet.fleetType?.typeName}
-                      </p>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span>{fleet.plateNumber}</span>
+                        <span>•</span>
+                        <span>{fleet.fleetType?.typeName || 'Unknown Type'}</span>
+                        <span>•</span>
+                        <Badge variant={fleet.status === 'Available' ? 'default' : 'secondary'} className="text-xs">
+                          {fleet.status}
+                        </Badge>
+                      </div>
+                      {fleet.vehicleModel && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {fleet.vehicleModel} • {fleet.color || 'Unknown Color'}
+                        </p>
+                      )}
                     </div>
                   </div>
                   {isSelected && (
-                    <div className="flex items-center space-x-2">
-                      <Label htmlFor={`rate-${fleet.fleetId}`} className="text-sm">
-                        Hourly Rate:
-                      </Label>
-                      <Input
-                        id={`rate-${fleet.fleetId}`}
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={hourlyRate}
-                        onChange={(e) => onHourlyRateChange(fleet.fleetId, parseFloat(e.target.value) || 0)}
-                        className="w-24"
-                        placeholder="0.00"
-                      />
+                    <div className="flex flex-col items-end space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <Label htmlFor={`rate-${fleet.fleetId}`} className="text-sm whitespace-nowrap">
+                          Hourly Rate:
+                        </Label>
+                        <Input
+                          id={`rate-${fleet.fleetId}`}
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={hourlyRate}
+                          onChange={(e) => onHourlyRateChange(fleet.fleetId, parseFloat(e.target.value) || 0)}
+                          className="w-28"
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Default: ${fleet.hourlyRate?.toFixed(2) || '0.00'}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -150,14 +218,33 @@ const FleetSelection: React.FC<FleetSelectionProps> = ({
         })}
       </div>
       
+      {/* Summary Card */}
       {selectedFleetIds.length > 0 && (
-        <Card>
+        <Card className="bg-primary/5 border-primary/20">
           <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="font-medium">Total Hourly Rate:</span>
-              <span className="text-lg font-bold">
-                ${calculateTotalHourlyRate(fleetHourlyRates).toFixed(2)}
-              </span>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              <div>
+                <div className="text-2xl font-bold text-primary">{selectedFleetIds.length}</div>
+                <div className="text-sm text-muted-foreground">Fleet{selectedFleetIds.length !== 1 ? 's' : ''} Selected</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-green-600">
+                  ${calculateTotalHourlyRate(fleetHourlyRates).toFixed(2)}
+                </div>
+                <div className="text-sm text-muted-foreground">Total Hourly Rate</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-blue-600">
+                  ${(calculateTotalHourlyRate(fleetHourlyRates) * 8).toFixed(2)}
+                </div>
+                <div className="text-sm text-muted-foreground">Daily Rate (8hrs)</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-purple-600">
+                  ${(calculateTotalHourlyRate(fleetHourlyRates) * 8 * 30).toFixed(2)}
+                </div>
+                <div className="text-sm text-muted-foreground">Monthly Rate (30 days)</div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -169,6 +256,8 @@ const FleetSelection: React.FC<FleetSelectionProps> = ({
 const LposCreate: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const user = useSelector(selectCurrentUser);
+  const { roleNavigate } = useRoleNavigation();
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedProject, setSelectedProject] = useState<SiteProject | null>(null);
   
@@ -181,7 +270,7 @@ const LposCreate: React.FC = () => {
   // Extract data from API responses
   const fleets = fleetsData?.fleets || [];
   const customers = customersData?.customers || [];
-  const projects = projectsData?.projects || [];
+  const projects = projectsData?.siteProjects || [];
   
   // Loading state
   const isLoading = fleetsLoading || customersLoading || projectsLoading;
@@ -268,7 +357,7 @@ const LposCreate: React.FC = () => {
       await createLPOMutation(data as CreateLPORequest).unwrap();
       toast.success('LPO created successfully');
       dispatch(clearFormData());
-      navigate('/lpos');
+      roleNavigate(NavigationPaths.LPO.LIST);
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
@@ -307,7 +396,7 @@ const LposCreate: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={() => navigate('/lpos')}>
+          <Button variant="ghost" onClick={() => roleNavigate(NavigationPaths.LPO.LIST)}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to LPOs
           </Button>
@@ -559,12 +648,12 @@ const LposCreate: React.FC = () => {
                               <p className="text-sm text-muted-foreground">{selectedProject.projectName}</p>
                             </div>
                             <div>
-                              <Label className="text-sm font-medium">Main Client</Label>
-                              <p className="text-sm text-muted-foreground">{selectedProject.mainClient}</p>
+                              <Label className="text-sm font-medium">Main Contractor</Label>
+                              <p className="text-sm text-muted-foreground">{selectedProject.mainContractor}</p>
                             </div>
                             <div>
                               <Label className="text-sm font-medium">Location</Label>
-                              <p className="text-sm text-muted-foreground">{selectedProject.location}</p>
+                              <p className="text-sm text-muted-foreground">{selectedProject.zonalSite}</p>
                             </div>
                             <div>
                               <Label className="text-sm font-medium">Status</Label>

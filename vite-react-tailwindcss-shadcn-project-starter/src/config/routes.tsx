@@ -2,7 +2,7 @@ import React, { ReactElement } from "react";
 import { Route } from "react-router-dom";
 import Dashboard from "../pages/Dashboard";
 import { FleetList, FleetView, FleetEdit } from "../modules/fleet/components";
-import { LposList, LposView, LposEdit, LposCreate } from "../modules/lpos";
+import { LposList, LposView, LposEdit, LposCreate, LpoPdfView } from "../modules/lpos";
 import { CustomerList, CustomerCreate, CustomerEdit, CustomerView, CustomerLedger } from "../modules/customer";
 import { Timesheet, ManageCheckin } from "../modules/timesheet";
 import { PurchaseOrderList, PurchaseOrderCreate, PurchaseOrderEdit, PurchaseOrderView, SupplierList, SupplierCreate, SupplierEdit, SupplierView, SupplierLedger, AddPaymentByFleet, FleetPurchases, ViewFleetPurchases, FleetReceiveShipping } from "../modules/fleet-purchases";
@@ -106,13 +106,37 @@ export const allRoutes: RouteConfig[] = [
     access: ["admin", "manager", "employee"],
     action: ["read"]
   },
+   {
+    url: "lpos/view/:id",
+    component: <LposView />,
+    module: "MRM",
+    name: "View LPO",
+    access: ["admin", "manager", "employee"],
+    action: ["read"]
+  },
+    {
+    url: "lpos/view/:id/pdf",
+    component: <LposView />,
+    module: "MRM",
+    name: "View LPO",
+    access: ["admin", "manager", "employee"],
+    action: ["read"]
+  },
   {
-    url: "lpos/:id/edit",
+    url: "lpos/edit/:id",
     component: <LposEdit />,
     module: "MRM",
     name: "Edit LPO",
     access: ["admin", "manager"],
     action: ["update"]
+  },
+  {
+    url: "lpos/:id/pdf",
+    component: <LpoPdfView />,
+    module: "MRM",
+    name: "LPO PDF Preview",
+    access: ["admin", "manager", "employee"],
+    action: ["read"]
   },
   
   // Timesheet Management Routes

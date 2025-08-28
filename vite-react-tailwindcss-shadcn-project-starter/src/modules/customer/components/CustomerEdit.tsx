@@ -139,7 +139,6 @@ const CustomerEdit: React.FC = () => {
   }, [customerError]);
   
   const handleBack = () => {
-    const role = user?.Role?.roleName?.toLowerCase() || 'admin';
     navigate('/customer');
   };
   
@@ -152,7 +151,7 @@ const CustomerEdit: React.FC = () => {
         ...data,
       }).unwrap();
       toast.success(result.message || 'Customer updated successfully');
-      navigate(`/${user?.Role?.roleName?.toLowerCase() || 'admin'}/customer/view/${customerId}`);
+      navigate(`/customer/view/${customerId}`);
     } catch (error: any) {
       console.error('Update error:', error);
       toast.error(getErrorMessage(error));

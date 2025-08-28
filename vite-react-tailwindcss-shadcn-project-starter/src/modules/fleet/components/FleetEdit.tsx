@@ -61,12 +61,8 @@ import {
   MAX_FILE_SIZE_MB,
 } from '../utils';
 import { FLEET_SECTIONS, FLEET_SELECT_OPTIONS } from '../constants';
-import { fleetSchema } from '../schemas/fleetSchema';
+import { fleetFormSchema, type FleetFormData } from '../schemas/fleetSchema';
 import type { Fleet, FleetAttachment, FleetSticker } from '../types';
-
-interface FleetFormData {
-  [key: string]: any;
-}
 
 const FleetEdit: React.FC = () => {
   const { fleetId } = useParams<{ fleetId: string }>();
@@ -91,15 +87,18 @@ const FleetEdit: React.FC = () => {
   const fleetTypes = fleetTypesResponse?.fleetTypes || [];
 
   const form = useForm<FleetFormData>({
-    resolver: zodResolver(fleetSchema),
+    resolver: zodResolver(fleetFormSchema),
     defaultValues: {},
   });
 
   // Initialize form data when fleet is loaded
   useEffect(() => {
     if (fleet) {
+      // Extract TBC data from nested fleetTbc object
+      const fleetTbcData = fleet.fleetTbc || {};
+      
       const formData: FleetFormData = {
-        fleetType: fleet.fleetType || '',
+        fleetType: fleet.fleetType?.fleetTypeId || fleet.fleetType || '',
         plateNumber: fleet.plateNumber || '',
         plateType: fleet.plateType || '',
         ownerName: fleet.ownerName || '',
@@ -110,7 +109,7 @@ const FleetEdit: React.FC = () => {
         registrationRenewalDate: formatDateForPicker(fleet.registrationRenewalDate),
         registrationExpiryDate: formatDateForPicker(fleet.registrationExpiryDate),
         fahesDate: formatDateForPicker(fleet.fahesDate),
-        fahesReportUrl: fleet.fahesReportUrl || '',
+        fahesReportUrl: fleet.fahesReport || '',
         vehicleName: fleet.vehicleName || '',
         vehicleModel: fleet.vehicleModel || '',
         madeIn: fleet.madeIn || '',
@@ -129,14 +128,15 @@ const FleetEdit: React.FC = () => {
         insuranceExpiryDate: formatDateForPicker(fleet.insuranceExpiryDate),
         ownershipType: fleet.ownershipType || '',
         insuranceType: fleet.insuranceType || '',
-        tpcInspectionAs: fleet.tpcInspectionAs || '',
-        tpcExpiryDate: formatDateForPicker(fleet.tpcExpiryDate),
-        thirdPartyCertificateCo: fleet.thirdPartyCertificateCo || '',
-        inspectionDate: formatDateForPicker(fleet.inspectionDate),
-        inspectionExpiryDate: formatDateForPicker(fleet.inspectionExpiryDate),
-        inspectionType: fleet.inspectionType || '',
-        dateOfLastExamination: formatDateForPicker(fleet.dateOfLastExamination),
-        dateOfNextExamination: formatDateForPicker(fleet.dateOfNextExamination),
+        // TBC fields from nested fleetTbc object
+        tpcInspectionAs: fleetTbcData.inspectionAs || '',
+        tpcExpiryDate: formatDateForPicker(fleetTbcData.expiryDate),
+        thirdPartyCertificateCo: fleetTbcData.certificateCo || '',
+        inspectionDate: formatDateForPicker(fleetTbcData.inspectionDate),
+        inspectionExpiryDate: formatDateForPicker(fleetTbcData.inspectionExpiryDate),
+        inspectionType: fleetTbcData.inspectionType || '',
+        dateOfLastExamination: formatDateForPicker(fleetTbcData.dateOfLastExamination),
+        dateOfNextExamination: formatDateForPicker(fleetTbcData.dateOfNextExamination),
       };
 
       form.reset(formData);
@@ -157,7 +157,7 @@ const FleetEdit: React.FC = () => {
         siteInspectionStickerAttachment: null,
         siteInspectionStickerAttachmentUrl: sticker.fileUrl || '',
         siteInspectionStickerAttachmentName: sticker.fileName || '',
-        isCreated: true,
+        isCreated: sticker.isCreated || true,
         stickerId: sticker.id || '',
       })) || [];
       setStickers(initialStickers);
@@ -174,11 +174,12 @@ const FleetEdit: React.FC = () => {
 
       // Add form fields
       Object.keys(data).forEach((key) => {
-        if (key !== 'fahesReport' && key !== 'fahesReportUrl') {
+        if (key !== 'fahesReport' && key !== 'fahesReportUrl' && key !== 'attachments' && key !== 'stickers') {
+          const value = (data as any)[key];
           if (isNumberField(key)) {
-            formData.append(key, data[key] ? parseFloat(data[key]).toString() : '');
+            formData.append(key, value ? parseFloat(value).toString() : '');
           } else {
-            formData.append(key, data[key] || '');
+            formData.append(key, value || '');
           }
         }
       });
@@ -217,7 +218,7 @@ const FleetEdit: React.FC = () => {
         }
       });
 
-      const result = await updateFleet({ id: id!, data: formData }).unwrap();
+      const result = await updateFleet({ id: fleetId!, data: formData }).unwrap();
       toast.success(result.message || 'Fleet updated successfully');
       handleBack();
     } catch (error: any) {

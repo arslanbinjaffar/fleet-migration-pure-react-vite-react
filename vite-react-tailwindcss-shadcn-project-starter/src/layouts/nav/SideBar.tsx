@@ -135,17 +135,18 @@ const Sidebar: React.FC<SidebarProps> = ({ show, sidebarMenuItems, selectedModul
         "bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-700 dark:to-purple-700 shadow-lg shadow-blue-500/20 dark:shadow-blue-700/20"
       )}>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center">
-            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+          <div className="w-full h-24 rounded-lg  flex items-center justify-center">
+            {/* <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-            </svg>
+            </svg> */}
+            <img src="/assets/logos/fleet-logo.png" alt="logo" className="w-full h-full object-contain " />
           </div>
-          <span className={cn(
+          {/* <span className={cn(
             "text-white font-bold text-lg transition-opacity duration-200",
             (!show && !iconHover) ? "opacity-0 w-0" : "opacity-100"
           )}>
             FleetMS
-          </span>
+          </span> */}
         </div>
       </div>
 

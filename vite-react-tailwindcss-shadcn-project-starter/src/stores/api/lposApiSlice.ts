@@ -48,7 +48,7 @@ export const lposApiSlice = apiSlice.injectEndpoints({
     // Create new LPO
     createLPO: builder.mutation<LPOResponse, CreateLPORequest>({
       query: (lpoData) => ({
-        url: '/lpo/create',
+        url: 'lpo',
         method: 'POST',
         body: lpoData,
       }),
@@ -58,7 +58,7 @@ export const lposApiSlice = apiSlice.injectEndpoints({
     // Update existing LPO
     updateLPO: builder.mutation<LPOResponse, UpdateLPORequest>({
       query: ({ lpoId, ...data }) => ({
-        url: `/lpo/update/${lpoId}`,
+        url: `lpo/update/${lpoId}`,
         method: 'PUT',
         body: data,
       }),
@@ -71,7 +71,7 @@ export const lposApiSlice = apiSlice.injectEndpoints({
     // Delete LPO
     deleteLPO: builder.mutation<{ message: string }, string>({
       query: (id) => ({
-        url: `/lpo/delete/${id}`,
+        url: `lpo/delete/${id}`,
         method: 'DELETE',
       }),
       invalidatesTags: (result, error, id) => [
@@ -83,7 +83,7 @@ export const lposApiSlice = apiSlice.injectEndpoints({
     // Stop LPO
     stopLPO: builder.mutation<LPOResponse, string>({
       query: (id) => ({
-        url: `/lpo/stopped/${id}`,
+        url: `lpo/stopped/${id}`,
         method: 'POST',
       }),
       invalidatesTags: (result, error, id) => [
@@ -95,7 +95,7 @@ export const lposApiSlice = apiSlice.injectEndpoints({
     // Export LPOs
     exportLPOs: builder.mutation<Blob, ExportLPOsRequest>({
       query: (exportData) => ({
-        url: '/lpo/export',
+        url: 'lpo/export',
         method: 'POST',
         body: exportData,
         responseHandler: (response) => response.blob(),

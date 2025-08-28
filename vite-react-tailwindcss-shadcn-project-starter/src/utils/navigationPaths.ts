@@ -36,6 +36,7 @@ export const NavigationPaths = {
     CREATE: 'lpos/create',
     VIEW: (id: string) => `lpos/view/${id}`,
     EDIT: (id: string) => `lpos/edit/${id}`,
+    PDF: (id: string) => `lpos/${id}/pdf`,
   },
 
   // Timesheet Management Module

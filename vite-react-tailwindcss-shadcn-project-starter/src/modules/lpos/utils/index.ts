@@ -66,7 +66,10 @@ export const generateLPONumber = (): string => {
 };
 
 export const calculateTotalHourlyRate = (fleetHourlyRates: { fleetId: string; hourlyRate: number }[]): number => {
-  return fleetHourlyRates.reduce((total, rate) => total + rate.hourlyRate, 0);
+  if (!fleetHourlyRates || !Array.isArray(fleetHourlyRates)) {
+    return 0;
+  }
+  return fleetHourlyRates.reduce((total, rate) => total + (rate?.hourlyRate || 0), 0);
 };
 
 export const calculateEstimatedCost = (

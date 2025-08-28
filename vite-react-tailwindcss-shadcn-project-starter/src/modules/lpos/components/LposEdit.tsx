@@ -4,6 +4,8 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectCurrentUser } from '../../../stores/slices/authSlice';
+import useRoleNavigation from '../../../utils/useNavigation';
+import { NavigationPaths } from '../../../utils/navigationPaths';
 import {
   ArrowLeft,
   Save,
@@ -60,7 +62,7 @@ import {
 } from '../types';
 import {
   updateLpoSchema,
-  LpoFormData,
+  UpdateLpoData,
 } from '../schemas/lpoSchema';
 import {
   LPO_STATUS_OPTIONS,
@@ -92,20 +94,80 @@ const FleetSelection: React.FC<FleetSelectionProps> = ({
   onHourlyRateChange,
   disabled = false,
 }) => {
+  const [selectAll, setSelectAll] = useState(false);
+  
+  // Include both available fleets AND already selected fleets (like legacy implementation)
+  // This ensures selected fleets remain visible even if their status changed
   const availableFleets = allFleets.filter(fleet => 
     fleet.status === 'Available' || selectedFleetIds.includes(fleet.fleetId)
   );
+  
+  console.log('Fleet selection data:', {
+    allFleets: allFleets.length,
+    selectedFleetIds,
+    availableFleets: availableFleets.length,
+    fleetHourlyRates
+  });
+  
+  // Handle select all functionality
+  const handleSelectAll = (checked: boolean) => {
+    if (disabled) return;
+    setSelectAll(checked);
+    availableFleets.forEach(fleet => {
+      const isCurrentlySelected = selectedFleetIds.includes(fleet.fleetId);
+      if (checked && !isCurrentlySelected) {
+        onFleetSelect(fleet.fleetId, true);
+      } else if (!checked && isCurrentlySelected) {
+        onFleetSelect(fleet.fleetId, false);
+      }
+    });
+  };
+  
+  // Update select all state when individual selections change
+  useEffect(() => {
+    const allSelected = availableFleets.length > 0 && availableFleets.every(fleet => selectedFleetIds.includes(fleet.fleetId));
+    setSelectAll(allSelected);
+  }, [selectedFleetIds, availableFleets]);
 
   return (
     <div className="space-y-4">
+      {/* Select All Option */}
+      {availableFleets.length > 0 && (
+        <Card className={`border-dashed ${disabled ? 'opacity-50' : ''}`}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <input
+                  type="checkbox"
+                  checked={selectAll}
+                  onChange={(e) => handleSelectAll(e.target.checked)}
+                  disabled={disabled}
+                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                />
+                <div>
+                  <h4 className="font-semibold">Select All Available Fleets</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {availableFleets.length} available fleet{availableFleets.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+              </div>
+              <Badge variant="outline">
+                {selectedFleetIds.length} / {availableFleets.length} selected
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Individual Fleet Selection */}
       <div className="grid gap-4">
         {availableFleets.map((fleet) => {
           const isSelected = selectedFleetIds.includes(fleet.fleetId);
-          const hourlyRate = fleetHourlyRates.find(r => r.fleetId === fleet.fleetId)?.hourlyRate || 0;
+          const hourlyRate = fleetHourlyRates.find(r => r.fleetId === fleet.fleetId)?.hourlyRate || fleet.hourlyRate || 0;
           
           return (
-            <Card key={fleet.fleetId} className={`cursor-pointer transition-colors ${
-              isSelected ? 'ring-2 ring-primary' : 'hover:bg-muted/50'
+            <Card key={fleet.fleetId} className={`cursor-pointer transition-all duration-200 ${
+              isSelected ? 'ring-2 ring-primary shadow-md' : 'hover:bg-muted/50 hover:shadow-sm'
             } ${disabled ? 'opacity-50' : ''}`}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -117,32 +179,45 @@ const FleetSelection: React.FC<FleetSelectionProps> = ({
                       disabled={disabled}
                       className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
                     />
-                    <div>
+                    <div className="flex-1">
                       <h4 className="font-semibold">{fleet.vehicleName}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {fleet.plateNumber} • {fleet.fleetType?.typeName}
-                      </p>
-                      <Badge variant={fleet.status === 'Available' ? 'default' : 'secondary'} className="mt-1">
-                        {fleet.status}
-                      </Badge>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span>{fleet.plateNumber}</span>
+                        <span>•</span>
+                        <span>{fleet.fleetType?.typeName || 'Unknown Type'}</span>
+                        <span>•</span>
+                        <Badge variant={fleet.status === 'Available' ? 'default' : 'secondary'} className="text-xs">
+                          {fleet.status}
+                        </Badge>
+                      </div>
+                      {fleet.vehicleModel && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {fleet.vehicleModel} • {fleet.color || 'Unknown Color'}
+                        </p>
+                      )}
                     </div>
                   </div>
                   {isSelected && (
-                    <div className="flex items-center space-x-2">
-                      <Label htmlFor={`rate-${fleet.fleetId}`} className="text-sm">
-                        Hourly Rate:
-                      </Label>
-                      <Input
-                        id={`rate-${fleet.fleetId}`}
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={hourlyRate}
-                        onChange={(e) => !disabled && onHourlyRateChange(fleet.fleetId, parseFloat(e.target.value) || 0)}
-                        disabled={disabled}
-                        className="w-24"
-                        placeholder="0.00"
-                      />
+                    <div className="flex flex-col items-end space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <Label htmlFor={`rate-${fleet.fleetId}`} className="text-sm whitespace-nowrap">
+                          Hourly Rate:
+                        </Label>
+                        <Input
+                          id={`rate-${fleet.fleetId}`}
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={hourlyRate}
+                          onChange={(e) => !disabled && onHourlyRateChange(fleet.fleetId, parseFloat(e.target.value) || 0)}
+                          disabled={disabled}
+                          className="w-28"
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Default: ${fleet.hourlyRate?.toFixed(2) || '0.00'}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -152,14 +227,33 @@ const FleetSelection: React.FC<FleetSelectionProps> = ({
         })}
       </div>
       
+      {/* Summary Card */}
       {selectedFleetIds.length > 0 && (
-        <Card>
+        <Card className={`bg-primary/5 border-primary/20 ${disabled ? 'opacity-50' : ''}`}>
           <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="font-medium">Total Hourly Rate:</span>
-              <span className="text-lg font-bold">
-                ${calculateTotalHourlyRate(fleetHourlyRates).toFixed(2)}
-              </span>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              <div>
+                <div className="text-2xl font-bold text-primary">{selectedFleetIds.length}</div>
+                <div className="text-sm text-muted-foreground">Fleet{selectedFleetIds.length !== 1 ? 's' : ''} Selected</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-green-600">
+                  ${calculateTotalHourlyRate(fleetHourlyRates).toFixed(2)}
+                </div>
+                <div className="text-sm text-muted-foreground">Total Hourly Rate</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-blue-600">
+                  ${(calculateTotalHourlyRate(fleetHourlyRates) * 8).toFixed(2)}
+                </div>
+                <div className="text-sm text-muted-foreground">Daily Rate (8hrs)</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-purple-600">
+                  ${(calculateTotalHourlyRate(fleetHourlyRates) * 8 * 30).toFixed(2)}
+                </div>
+                <div className="text-sm text-muted-foreground">Monthly Rate (30 days)</div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -172,6 +266,7 @@ const LposEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const user = useSelector(selectCurrentUser);
+  const { roleNavigate } = useRoleNavigation();
   
   // Local state
   const [selectedProject, setSelectedProject] = useState<SiteProject | null>(null);
@@ -194,12 +289,15 @@ const LposEdit: React.FC = () => {
   const customers = customersData?.customers || [];
   const projects = projectsData?.projects || [];
   
-  // Loading and error states
+  // Loading and error states - ensure all data is loaded before proceeding
   const isLoading = lpoLoading || fleetsLoading || customersLoading || projectsLoading;
   const error = lpoError ? getErrorMessage(lpoError) : null;
+  
+  // Check if all required data is available for form initialization
+  const isDataReady = !isLoading && lpo && allFleets.length > 0 && customers.length > 0 && projects.length > 0;
 
   // Form setup
-  const form = useForm<LpoFormData>({
+  const form = useForm<UpdateLpoData>({
     resolver: zodResolver(updateLpoSchema),
     mode: 'onChange',
   });
@@ -207,31 +305,39 @@ const LposEdit: React.FC = () => {
   const { control, handleSubmit, watch, setValue, reset, formState: { errors, isValid, isDirty } } = form;
   const watchedValues = watch();
 
-  // Initialize form when LPO data is loaded
+  // Initialize form when all required data is loaded - following legacy pattern
   useEffect(() => {
-    if (lpo && !isLoading) {
-      reset({
+    if (isDataReady) {
+      // Ensure fleet data is properly structured like in legacy implementation
+      const formData = {
         lpoId: lpo.lpoId,
-        fleetIds: lpo.fleetIds,
-        fleetHourlyRates: lpo.fleetHourlyRates,
-        siteProjectId: lpo.siteProjectId,
-        purpose: lpo.purpose,
-        lpoStartDate: lpo.lpoStartDate,
-        lpoEndDate: lpo.lpoEndDate,
-        referenceNumber: lpo.referenceNumber,
-        status: lpo.status,
-        customerId: lpo.customerId,
-        designation: lpo.designation,
-        address: lpo.address,
-        termsAndCondition: lpo.termsAndCondition,
-      });
+        fleetIds: lpo.fleetIds || [],
+        fleetHourlyRates: lpo.fleetHourlyRates || [],
+        siteProjectId: lpo.siteProjectId || '',
+        purpose: lpo.purpose || '',
+        lpoStartDate: lpo.lpoStartDate || '',
+        lpoEndDate: lpo.lpoEndDate || '',
+        referenceNumber: lpo.referenceNumber || '',
+        status: lpo.status || 'Pending',
+        customerId: lpo.customerId || '',
+        designation: lpo.designation || '',
+        address: lpo.address || '',
+        termsAndCondition: lpo.termsAndCondition || '',
+      };
       
-      // Set selected project
+      console.log('Initializing form with LPO data:', formData);
+      reset(formData);
+      
+      // Set selected project after form reset
       if (lpo.siteProject) {
         setSelectedProject(lpo.siteProject);
+      } else if (lpo.siteProjectId && projects.length > 0) {
+        // Find project from projects list if not included in LPO response
+        const project = projects.find(p => p.siteProjectId === lpo.siteProjectId);
+        setSelectedProject(project || null);
       }
     }
-  }, [lpo, isLoading, reset]);
+  }, [isDataReady, lpo, allFleets, customers, projects, reset]);
 
   // Show error toast when API error occurs
   useEffect(() => {
@@ -240,30 +346,40 @@ const LposEdit: React.FC = () => {
     }
   }, [error]);
 
-  // Handle project selection
+  // Handle project selection - ensure projects are loaded
   useEffect(() => {
-    if (watchedValues.siteProjectId) {
+    if (watchedValues.siteProjectId && projects.length > 0) {
       const project = projects.find(p => p.siteProjectId === watchedValues.siteProjectId);
       setSelectedProject(project || null);
+      console.log('Selected project updated:', project);
     }
   }, [watchedValues.siteProjectId, projects]);
 
-  // Fleet selection handlers
+  // Fleet selection handlers - enhanced with proper data handling like legacy
   const handleFleetSelect = (fleetId: string, selected: boolean) => {
     const currentFleetIds = watchedValues.fleetIds || [];
     const currentRates = watchedValues.fleetHourlyRates || [];
     
+    console.log('Fleet selection change:', { fleetId, selected, currentFleetIds, currentRates });
+    
     if (selected) {
-      // Add fleet
-      const newFleetIds = [...currentFleetIds, fleetId];
-      const fleet = allFleets.find(f => f.fleetId === fleetId);
-      const newRates = [...currentRates, {
-        fleetId,
-        hourlyRate: fleet?.hourlyRate || 0,
-      }];
-      
-      setValue('fleetIds', newFleetIds, { shouldDirty: true });
-      setValue('fleetHourlyRates', newRates, { shouldDirty: true });
+      // Add fleet - check if already exists to prevent duplicates
+      if (!currentFleetIds.includes(fleetId)) {
+        const newFleetIds = [...currentFleetIds, fleetId];
+        const fleet = allFleets.find(f => f.fleetId === fleetId);
+        
+        // Check if rate already exists (for edit mode)
+        const existingRate = currentRates.find(r => r.fleetId === fleetId);
+        const newRates = existingRate 
+          ? currentRates 
+          : [...currentRates, {
+              fleetId,
+              hourlyRate: fleet?.hourlyRate || 0,
+            }];
+        
+        setValue('fleetIds', newFleetIds, { shouldDirty: true });
+        setValue('fleetHourlyRates', newRates, { shouldDirty: true });
+      }
     } else {
       // Remove fleet
       const newFleetIds = currentFleetIds.filter(id => id !== fleetId);
@@ -283,23 +399,30 @@ const LposEdit: React.FC = () => {
   };
 
   // Form submission
-  const onSubmit = async (data: LpoFormData) => {
+  const onSubmit = async (data: UpdateLpoData) => {
     if (!lpo) return;
     
     try {
       await updateLPOMutation(data as UpdateLPORequest).unwrap();
       toast.success('LPO updated successfully');
-      navigate(`/${user?.Role?.roleName || 'admin'}/lpos/${lpo.lpoId}`);
+      roleNavigate(NavigationPaths.LPO.VIEW(lpo.lpoId));
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
   };
 
-  if (isLoading) {
+  // Show loading until ALL required data is available (following legacy pattern)
+  if (!isDataReady) {
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="h-8 w-8 animate-spin" />
         <span className="ml-2">Loading LPO data...</span>
+        <div className="ml-4 text-sm text-muted-foreground">
+          {lpoLoading && 'Loading LPO...'}
+          {fleetsLoading && 'Loading fleets...'}
+          {customersLoading && 'Loading customers...'}
+          {projectsLoading && 'Loading projects...'}
+        </div>
       </div>
     );
   }
@@ -308,7 +431,7 @@ const LposEdit: React.FC = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={() => navigate(`/${user?.Role?.roleName || 'admin'}/lpos`)}>
+          <Button variant="ghost" onClick={() => roleNavigate(NavigationPaths.LPO.LIST)}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to LPOs
           </Button>
@@ -331,11 +454,11 @@ const LposEdit: React.FC = () => {
     : 0;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="w-full mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={() => navigate(`/${user?.Role?.roleName || 'admin'}/lpos/${lpo.lpoId}`)}>
+          <Button variant="ghost" onClick={() => roleNavigate(NavigationPaths.LPO.VIEW(lpo.lpoId))}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to LPO
           </Button>
@@ -349,7 +472,7 @@ const LposEdit: React.FC = () => {
           </div>
         </div>
         
-        <Button variant="outline" onClick={() => navigate(`/${user?.Role?.roleName || 'admin'}/lpos/${lpo.lpoId}`)}>
+        <Button variant="outline" onClick={() => roleNavigate(NavigationPaths.LPO.VIEW(lpo.lpoId))}>
           <Eye className="h-4 w-4 mr-2" />
           View LPO
         </Button>
@@ -444,11 +567,17 @@ const LposEdit: React.FC = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {projects.map((project) => (
-                            <SelectItem key={project.siteProjectId} value={project.siteProjectId}>
-                              {project.projectName} - {project.mainClient}
+                          {projects.length > 0 ? (
+                            projects.map((project) => (
+                              <SelectItem key={project.siteProjectId} value={project.siteProjectId}>
+                                {project.projectName} - {project.mainClient}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="" disabled>
+                              No projects available
                             </SelectItem>
-                          ))}
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -624,11 +753,17 @@ const LposEdit: React.FC = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {customers.map((customer) => (
-                            <SelectItem key={customer.customerId} value={customer.customerId}>
-                              {customer.firstname} {customer.lastname} - {customer.email}
+                          {customers.length > 0 ? (
+                            customers.map((customer) => (
+                              <SelectItem key={customer.customerId} value={customer.customerId}>
+                                {customer.firstname} {customer.lastname} - {customer.email}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="" disabled>
+                              No customers available
                             </SelectItem>
-                          ))}
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -757,7 +892,7 @@ const LposEdit: React.FC = () => {
             <Button
               type="button"
               variant="outline"
-              onClick={() => navigate(`/${user?.Role?.roleName || 'admin'}/lpos/${lpo.lpoId}`)}
+              onClick={() => roleNavigate(NavigationPaths.LPO.VIEW(lpo.lpoId))}
             >
               Cancel
             </Button>

@@ -367,7 +367,7 @@ const CustomerList: React.FC = () => {
               </p>
               <CreatePermission module={PermissionModule.Customers}>
                 {!searchQuery && (!filters.status || filters.status === 'all') && (
-                  <Button onClick={() => navigate(`/${user?.Role?.roleName?.toLowerCase() || 'admin'}/customer/create`)}>
+                  <Button onClick={() => navigate(`/customer/create`)}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add Customer
                   </Button>
@@ -520,10 +520,10 @@ const CustomerList: React.FC = () => {
                           <TableCell>
                             <ActionsDropdown
                               module={PermissionModule.Customers}
-                              onView={() => navigate(`/${user?.Role?.roleName?.toLowerCase() || 'admin'}/customer/view/${customer.customerId}`)}
-                              onEdit={() => navigate(`/${user?.Role?.roleName?.toLowerCase() || 'admin'}/customer/edit/${customer.customerId}`)}
+                              onView={() => navigate(`/customer/view/${customer.customerId}`)}
+                              onEdit={() => navigate(`/customer/edit/${customer.customerId}`)}
                               onDelete={() => openDeleteDialog(customer.customerId!)}
-                              onManage={() => navigate(`/${user?.Role?.roleName?.toLowerCase() || 'admin'}/customer/ledger/${customer.customerId}`)}
+                              onManage={() => navigate(`/customer/ledger/${customer.customerId}`)}
                               trigger={
                                 <Button variant="ghost" className="h-8 w-8 p-0">
                                   <MoreHorizontal className="h-4 w-4" />
