@@ -22,8 +22,10 @@ export const purchaseOrderItemSchema = z.object({
 
 export const purchaseOrderSchema = z.object({
   fleetSupplierId: z.string().min(1, 'Supplier is required'),
-  warehouseId: z.string().min(1, 'Warehouse is required'),
-  categoryId: z.string().optional(),
+  orderNumber: z.string().optional(),
+  subject: z.string().min(1, 'Subject is required').max(200, 'Subject must be less than 200 characters').optional(),
+  paymentDueDate: z.string().optional(),
+  details: z.string().max(2000, 'Details must be less than 2000 characters').optional(),
   items: z.array(purchaseOrderItemSchema).min(1, 'At least one item is required').max(50, 'Cannot exceed 50 items'),
   orderDate: z.string().min(1, 'Order date is required'),
   expectedDeliveryDate: z.string().optional(),
@@ -31,16 +33,7 @@ export const purchaseOrderSchema = z.object({
   terms: z.string().max(1000, 'Terms must be less than 1000 characters').optional(),
   discountAmount: z.number().min(0, 'Discount cannot be negative').optional().default(0),
   taxAmount: z.number().min(0, 'Tax cannot be negative').optional().default(0),
-}).refine((data) => {
-  // Validate that expected delivery date is after order date
-  if (data.expectedDeliveryDate && data.orderDate) {
-    return new Date(data.expectedDeliveryDate) >= new Date(data.orderDate);
-  }
-  return true;
-}, {
-  message: 'Expected delivery date must be on or after order date',
-  path: ['expectedDeliveryDate'],
-});
+})
 
 export const receiveShippingItemSchema = z.object({
   purchaseOrderItemId: z.string().min(1, 'Purchase order item is required'),

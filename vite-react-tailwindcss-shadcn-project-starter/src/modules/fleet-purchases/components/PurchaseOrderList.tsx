@@ -156,7 +156,6 @@ const PurchaseOrderList: React.FC = () => {
   });
   
   const { data: suppliersResponse } = useGetSuppliersQuery();
-  const { data: warehousesResponse } = useGetWarehousesQuery();
   
   const [deletePurchaseOrder, { isLoading: isDeleting }] = useDeletePurchaseOrderMutation();
   const [bulkDeletePurchaseOrders, { isLoading: isBulkDeleting }] = useBulkDeletePurchaseOrdersMutation();
@@ -164,10 +163,9 @@ const PurchaseOrderList: React.FC = () => {
   const [exportPurchaseOrders, { isLoading: isExporting }] = useExportPurchaseOrdersMutation();
   
   // Extract data from responses
-  const purchaseOrders = purchaseOrdersResponse?.purchaseOrders || [];
+  const purchaseOrders = purchaseOrdersResponse || [];
   const totalOrders = purchaseOrdersResponse?.total || 0;
   const suppliers = suppliersResponse?.suppliers || [];
-  const warehouses = warehousesResponse?.warehouses || [];
   
   // Update pagination when data changes
   useEffect(() => {

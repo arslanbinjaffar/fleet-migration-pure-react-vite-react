@@ -126,8 +126,10 @@ export const PERMISSIONS = {
 // Default Form Values
 export const DEFAULT_PURCHASE_ORDER_VALUES = {
   fleetSupplierId: '',
-  warehouseId: '',
-  categoryId: '',
+  orderNumber: '',
+  subject: '',
+  paymentDueDate: '',
+  details: '',
   items: [{
     productName: '',
     quantity: 1,

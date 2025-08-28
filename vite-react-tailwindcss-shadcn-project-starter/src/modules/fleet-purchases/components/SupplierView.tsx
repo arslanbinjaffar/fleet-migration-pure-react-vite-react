@@ -45,22 +45,23 @@ import {
   getErrorMessage,
 } from '../utils';
 import type { FleetSupplier } from '../types';
+import useRoleBasedNavigation from '@/utils/roleBasedNavigation';
 
 const SupplierView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const navigate = useRoleBasedNavigation();
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   
   // API hooks
   const {
-    data: supplier,
+    data: supplierResponse,
     isLoading,
     error,
     refetch,
   } = useGetSupplierByIdQuery(id!, {
     skip: !id,
   });
-  
+  const supplier=supplierResponse?.suppliers;
   const [updateSupplier] = useUpdateSupplierMutation();
   
   // Handlers

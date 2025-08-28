@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import useRoleNavigation from '../../../utils/useNavigation';
+import { NavigationPaths } from '../../../utils/navigationPaths';
 import {
   FileText,
   Plus,
@@ -72,9 +74,9 @@ import type { PurchaseOrderItem } from '../types';
 
 const PurchaseOrderEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const { roleNavigate } = useRoleNavigation();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+  const [grandTotal, setGrandTotal] = useState(0);
   // API hooks
   const {
     data: purchaseOrder,
@@ -85,20 +87,15 @@ const PurchaseOrderEdit: React.FC = () => {
   });
   
   const { data: suppliersResponse } = useGetSuppliersQuery();
-  const { data: warehousesResponse } = useGetWarehousesQuery();
-  const { data: categoriesResponse } = useGetCategoriesQuery();
   const [updatePurchaseOrder] = useUpdatePurchaseOrderMutation();
   
   // Extract data
   const suppliers = suppliersResponse?.suppliers || [];
-  const warehouses = warehousesResponse?.warehouses || [];
-  const categories = categoriesResponse?.categories || [];
   
   // Form setup
   const form = useForm<PurchaseOrderFormData>({
     resolver: zodResolver(purchaseOrderSchema),
   });
-  
   const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: 'items',
@@ -108,24 +105,33 @@ const PurchaseOrderEdit: React.FC = () => {
   const watchedDiscountAmount = form.watch('discountAmount') || 0;
   const watchedTaxAmount = form.watch('taxAmount') || 0;
   
-  // Initialize form with purchase order data
+  // Initialize form with purchase order data - enhanced for legacy compatibility
   useEffect(() => {
     if (purchaseOrder) {
+      // Handle both new and legacy data structures
+      const items = purchaseOrder.items || purchaseOrder.requirements || [];
+      
       const formData: PurchaseOrderFormData = {
         fleetSupplierId: purchaseOrder.fleetSupplierId,
-        warehouseId: purchaseOrder.warehouseId,
-        categoryId: purchaseOrder.categoryId || '',
-        items: purchaseOrder.items.map(item => ({
-          productName: item.productName,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          description: item.description || '',
+        orderNumber: purchaseOrder.orderNumber || purchaseOrder.orderNo || '',
+        subject: purchaseOrder.subject || '',
+        paymentDueDate: purchaseOrder.paymentDueDate 
+          ? purchaseOrder.paymentDueDate.split('T')[0] 
+          : '',
+        items: items.map((item: any) => ({
+          productName: item.productName || item.fleetName || '',
+          quantity: item.quantity || 0,
+          unitPrice: item.unitPrice || item.unitRate || 0,
+          description: item.description || item.category || '',
           specifications: item.specifications || '',
         })),
-        orderDate: purchaseOrder.orderDate.split('T')[0], // Convert to YYYY-MM-DD format
+        orderDate: purchaseOrder.orderDate 
+          ? purchaseOrder.orderDate.split('T')[0] 
+          : new Date().toISOString().split('T')[0],
         expectedDeliveryDate: purchaseOrder.expectedDeliveryDate 
           ? purchaseOrder.expectedDeliveryDate.split('T')[0] 
           : '',
+        details: purchaseOrder.details || '',
         notes: purchaseOrder.notes || '',
         terms: purchaseOrder.terms || '',
         discountAmount: purchaseOrder.discountAmount || 0,
@@ -135,17 +141,34 @@ const PurchaseOrderEdit: React.FC = () => {
       // Reset form with the data
       form.reset(formData);
       replace(formData.items);
+      
+      // Set initial grand total
+      const initialTotal = items?.length 
+        ? items.reduce((sum: number, item: any) => {
+            return sum + ((item.quantity || 0) * (item.unitPrice || item.unitRate || 0));
+          }, 0)
+        : 0;
+      setGrandTotal(initialTotal);
     }
   }, [purchaseOrder, form, replace]);
   
   // Calculate totals
-  const subtotal = calculateSubtotal(watchedItems.map(item => ({
-    ...item,
-    totalPrice: calculateItemTotal(item.quantity, item.unitPrice),
-  })) as PurchaseOrderItem[]);
-  
+const subtotal = calculateSubtotal(watchedItems?.map(item => ({
+  ...item,
+  totalPrice: calculateItemTotal(item?.quantity || 0, item?.unitPrice || 0),
+})) || [] as { totalPrice: number; productName: string; quantity: number; unitPrice: number; description?: string; specifications?: string; }[]);
   const total = calculateTotal(subtotal, watchedTaxAmount, watchedDiscountAmount);
   
+  // Update grand total when items change (legacy pattern)
+  useEffect(() => {
+    const newTotal = watchedItems 
+      ? watchedItems.reduce((sum, item) => {
+          if (!item) return sum;
+          return sum + ((item.quantity || 0) * (item.unitPrice || 0));
+        }, 0)
+      : 0;
+    setGrandTotal(newTotal);
+  }, [watchedItems]);
   // Handlers
   const handleAddItem = () => {
     append({
@@ -169,9 +192,17 @@ const PurchaseOrderEdit: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      await updatePurchaseOrder({ id, data }).unwrap();
+      // Prepare data with legacy field mapping
+      const submissionData = {
+        ...data,
+        total: grandTotal,
+        requirements: data.items, // Legacy field mapping
+        purchaseOrderId: id,
+      };
+      
+      await updatePurchaseOrder({ id, updatedPurchaseOrder: submissionData }).unwrap();
       toast.success('Purchase order updated successfully');
-      navigate(`/purchase-order-fleet/view/${id}`);
+      roleNavigate(NavigationPaths.FLEET_PURCHASES.VIEW_PURCHASE_ORDER(id));
     } catch (error: any) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -180,7 +211,18 @@ const PurchaseOrderEdit: React.FC = () => {
   };
   
   const handleCancel = () => {
-    navigate(`/purchase-order-fleet/view/${id}`);
+    if (id) {
+      roleNavigate(NavigationPaths.FLEET_PURCHASES.VIEW_PURCHASE_ORDER(id));
+    } else {
+      roleNavigate(NavigationPaths.FLEET_PURCHASES.PURCHASE_ORDERS);
+    }
+  };
+  
+  // Legacy-style input focus handler
+  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (e.target.value === '0') {
+      e.target.value = '';
+    }
   };
   
   // Loading state
@@ -253,7 +295,11 @@ const PurchaseOrderEdit: React.FC = () => {
       </div>
       
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(handleSubmit as any,
+  (formErrors) => {
+    console.error("Validation Errors:", formErrors);
+  }
+        )} className="space-y-6">
           {/* Basic Information */}
           <Card>
             <CardHeader>
@@ -292,57 +338,8 @@ const PurchaseOrderEdit: React.FC = () => {
                   )}
                 />
                 
-                <FormField
-                  control={form.control}
-                  name="warehouseId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Warehouse *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select warehouse" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {warehouses.map((warehouse) => (
-                            <SelectItem key={warehouse.warehouseId} value={warehouse.warehouseId}>
-                              {warehouse.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="categoryId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Category</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select category (optional)" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="">No category</SelectItem>
-                          {categories.map((category) => (
-                            <SelectItem key={category.categoryId} value={category.categoryId}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
+      
+             
                 <FormField
                   control={form.control}
                   name="orderDate"
@@ -359,12 +356,12 @@ const PurchaseOrderEdit: React.FC = () => {
                 
                 <FormField
                   control={form.control}
-                  name="expectedDeliveryDate"
+                  name="subject"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Expected Delivery Date</FormLabel>
+                      <FormLabel>Subject *</FormLabel>
                       <FormControl>
-                        <Input type="date" {...field} />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -506,7 +503,7 @@ const PurchaseOrderEdit: React.FC = () => {
           </Card>
           
           {/* Order Summary */}
-          <Card>
+          {/* <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Calculator className="h-5 w-5 mr-2" />
@@ -581,9 +578,9 @@ const PurchaseOrderEdit: React.FC = () => {
               </div>
             </CardContent>
           </Card>
-          
+           */}
           {/* Additional Information */}
-          <Card>
+          {/* <Card>
             <CardHeader>
               <CardTitle>Additional Information</CardTitle>
             </CardHeader>
@@ -624,7 +621,7 @@ const PurchaseOrderEdit: React.FC = () => {
                 )}
               />
             </CardContent>
-          </Card>
+          </Card> */}
           
           {/* Actions */}
           <div className="flex items-center justify-end space-x-4">
@@ -632,6 +629,7 @@ const PurchaseOrderEdit: React.FC = () => {
               Cancel
             </Button>
             <EditButton
+              module="PurchaseOrderFleet"
               type="submit"
               disabled={isSubmitting}
               className="min-w-[120px]"

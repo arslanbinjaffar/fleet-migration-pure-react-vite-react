@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import useRoleNavigation from '../../../utils/useNavigation';
+import { NavigationPaths } from '../../../utils/navigationPaths';
 import {
   FileText,
   ArrowLeft,
@@ -17,6 +19,7 @@ import {
   AlertTriangle,
   Truck,
   MapPin,
+  Printer,
 } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -59,6 +62,7 @@ import type { FleetPurchaseOrder } from '../types';
 const PurchaseOrderView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { roleNavigate } = useRoleNavigation();
   const [isApproving, setIsApproving] = useState(false);
   
   // API hooks
@@ -76,11 +80,13 @@ const PurchaseOrderView: React.FC = () => {
   
   // Handlers
   const handleBack = () => {
-    navigate('/purchase-order-fleet');
+    roleNavigate(NavigationPaths.FLEET_PURCHASES.PURCHASE_ORDERS);
   };
   
   const handleEdit = () => {
-    navigate(`/purchase-order-fleet/edit/${id}`);
+    if (id) {
+      roleNavigate(NavigationPaths.FLEET_PURCHASES.EDIT_PURCHASE_ORDER(id));
+    }
   };
   
   const handleApprove = async () => {

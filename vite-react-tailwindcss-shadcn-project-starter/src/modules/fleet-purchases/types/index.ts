@@ -49,9 +49,11 @@ export interface PurchaseOrderItem {
 export interface FleetPurchaseOrder {
   fleetPurchaseOrderId: string;
   fleetSupplierId: string;
-  warehouseId: string;
-  categoryId?: string;
   orderNumber: string;
+  orderNo?: string; // Legacy field compatibility
+  subject?: string; // Legacy field
+  paymentDueDate?: string; // Legacy field
+  details?: string; // Legacy field
   orderDate: string;
   expectedDeliveryDate?: string;
   actualDeliveryDate?: string;
@@ -66,9 +68,8 @@ export interface FleetPurchaseOrder {
   updatedAt: string;
   // Relations
   FleetSupplier?: FleetSupplier;
-  warehouse?: Warehouse;
-  category?: Category;
   items: PurchaseOrderItem[];
+  requirements?: any[]; // Legacy field for backward compatibility
 }
 
 export interface ReceiveShippingItem {

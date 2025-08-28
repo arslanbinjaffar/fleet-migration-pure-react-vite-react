@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -44,21 +44,22 @@ import {
 import { EditButton } from '../../../components/permissions';
 import { supplierSchema, type SupplierFormData } from '../schemas';
 import { getErrorMessage } from '../utils';
+import useRoleBasedNavigation from '@/utils/roleBasedNavigation';
 
 const SupplierEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const navigate = useRoleBasedNavigation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // API hooks
   const {
-    data: supplier,
+    data: supplierResponse,
     isLoading: isLoadingSupplier,
     error: supplierError,
   } = useGetSupplierByIdQuery(id!, {
     skip: !id,
   });
-  
+  const supplier = supplierResponse?.suppliers;
   const [updateSupplier] = useUpdateSupplierMutation();
   
   // Form setup
@@ -79,7 +80,6 @@ const SupplierEdit: React.FC = () => {
     { name: watchedName, excludeId: id },
     { skip: !watchedName || watchedName.length < 2 || watchedName === supplier?.name }
   );
-  
   // Initialize form with supplier data
   useEffect(() => {
     if (supplier) {
@@ -374,9 +374,9 @@ const SupplierEdit: React.FC = () => {
             <Button type="button" variant="outline" onClick={handleCancel}>
               Cancel
             </Button>
-            <EditButton
+            <EditButton module="supplier"
               type="submit"
-              disabled={isSubmitting || trnValidation?.exists || nameValidation?.exists}
+              disabled={isSubmitting}
               className="min-w-[120px]"
             >
               {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}

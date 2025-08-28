@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import useRoleNavigation from '../../../utils/useNavigation';
+import { NavigationPaths } from '../../../utils/navigationPaths';
 import {
   FileText,
   Plus,
@@ -42,6 +44,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -69,19 +72,16 @@ import { DEFAULT_PURCHASE_ORDER_VALUES } from '../constants';
 import type { PurchaseOrderItem } from '../types';
 
 const PurchaseOrderCreate: React.FC = () => {
-  const navigate = useNavigate();
+  const { roleNavigate } = useRoleNavigation();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [grandTotal, setGrandTotal] = useState(0);
   
   // API hooks
   const { data: suppliersResponse } = useGetSuppliersQuery();
-  const { data: warehousesResponse } = useGetWarehousesQuery();
-  const { data: categoriesResponse } = useGetCategoriesQuery();
   const [createPurchaseOrder] = useCreatePurchaseOrderMutation();
   
   // Extract data
   const suppliers = suppliersResponse?.suppliers || [];
-  const warehouses = warehousesResponse?.warehouses || [];
-  const categories = categoriesResponse?.categories || [];
   
   // Form setup
   const form = useForm<PurchaseOrderFormData>({
@@ -98,13 +98,21 @@ const PurchaseOrderCreate: React.FC = () => {
   const watchedDiscountAmount = form.watch('discountAmount') || 0;
   const watchedTaxAmount = form.watch('taxAmount') || 0;
   
-  // Calculate totals
+  // Calculate totals - following legacy pattern
   const subtotal = calculateSubtotal(watchedItems.map(item => ({
     ...item,
     totalPrice: calculateItemTotal(item.quantity, item.unitPrice),
   })) as PurchaseOrderItem[]);
   
   const total = calculateTotal(subtotal, watchedTaxAmount, watchedDiscountAmount);
+  
+  // Update grand total when items change (legacy pattern)
+  useEffect(() => {
+    const newTotal = watchedItems.reduce((sum, item) => {
+      return sum + (item.quantity * item.unitPrice);
+    }, 0);
+    setGrandTotal(newTotal);
+  }, [watchedItems]);
   
   // Handlers
   const handleAddItem = () => {
@@ -127,9 +135,16 @@ const PurchaseOrderCreate: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      await createPurchaseOrder(data).unwrap();
+      // Add calculated total to submission data (legacy pattern)
+      const submissionData = {
+        ...data,
+        total: grandTotal,
+        requirements: data.items, // Legacy field mapping
+      };
+      
+      await createPurchaseOrder(submissionData).unwrap();
       toast.success('Purchase order created successfully');
-      navigate('/purchase-order-fleet');
+      roleNavigate(NavigationPaths.FLEET_PURCHASES.PURCHASE_ORDERS);
     } catch (error: any) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -138,7 +153,14 @@ const PurchaseOrderCreate: React.FC = () => {
   };
   
   const handleCancel = () => {
-    navigate('/purchase-order-fleet');
+    roleNavigate(NavigationPaths.FLEET_PURCHASES.PURCHASE_ORDERS);
+  };
+  
+  // Legacy-style input focus handler
+  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (e.target.value === '0') {
+      e.target.value = '';
+    }
   };
   
   return (
@@ -179,6 +201,19 @@ const PurchaseOrderCreate: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
+                  name="orderNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Purchase Order No *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter order number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
                   name="fleetSupplierId"
                   render={({ field }) => (
                     <FormItem>
@@ -201,57 +236,7 @@ const PurchaseOrderCreate: React.FC = () => {
                     </FormItem>
                   )}
                 />
-                
-                <FormField
-                  control={form.control}
-                  name="warehouseId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Warehouse *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select warehouse" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {warehouses.map((warehouse) => (
-                            <SelectItem key={warehouse.warehouseId} value={warehouse.warehouseId}>
-                              {warehouse.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="categoryId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Category</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select category (optional)" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="">No category</SelectItem>
-                          {categories.map((category) => (
-                            <SelectItem key={category.categoryId} value={category.categoryId}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              
                 
                 <FormField
                   control={form.control}
@@ -273,6 +258,34 @@ const PurchaseOrderCreate: React.FC = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Expected Delivery Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="subject"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Subject *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter subject" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="paymentDueDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payment Due Date *</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} />
                       </FormControl>
@@ -309,11 +322,11 @@ const PurchaseOrderCreate: React.FC = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-12">#</TableHead>
-                      <TableHead className="min-w-[200px]">Product Name *</TableHead>
+                      <TableHead className="min-w-[200px]">Fleet Name *</TableHead>
+                      <TableHead className="min-w-[200px]">Category *</TableHead>
                       <TableHead className="w-24">Quantity *</TableHead>
-                      <TableHead className="w-32">Unit Price *</TableHead>
+                      <TableHead className="w-32">Unit Rate *</TableHead>
                       <TableHead className="w-32">Total</TableHead>
-                      <TableHead className="min-w-[150px]">Description</TableHead>
                       <TableHead className="w-12">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -333,7 +346,25 @@ const PurchaseOrderCreate: React.FC = () => {
                               render={({ field }) => (
                                 <FormItem>
                                   <FormControl>
-                                    <Input placeholder="Enter product name" {...field} />
+                                    <Input placeholder="Enter fleet name" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <FormField
+                              control={form.control}
+                              name={`items.${index}.description`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <textarea
+                                      className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                      placeholder="Enter category"
+                                      {...field}
+                                    />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
@@ -372,6 +403,7 @@ const PurchaseOrderCreate: React.FC = () => {
                                       step="0.01"
                                       {...field}
                                       onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                      onFocus={handleInputFocus}
                                     />
                                   </FormControl>
                                   <FormMessage />
@@ -382,19 +414,7 @@ const PurchaseOrderCreate: React.FC = () => {
                           <TableCell className="font-medium">
                             {formatCurrency(itemTotal)}
                           </TableCell>
-                          <TableCell>
-                            <FormField
-                              control={form.control}
-                              name={`items.${index}.description`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input placeholder="Description" {...field} />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                          </TableCell>
+
                           <TableCell>
                             <Button
                               type="button"
@@ -409,14 +429,30 @@ const PurchaseOrderCreate: React.FC = () => {
                         </TableRow>
                       );
                     })}
-                  </TableBody>
-                </Table>
+                    </TableBody>
+                    <TableFooter>
+                      <TableRow>
+                        <TableCell colSpan="4" className="text-right font-semibold p-4">
+                          Grand Total:
+                        </TableCell>
+                        <TableCell className="font-bold text-lg p-4">
+                          {formatCurrency(grandTotal)}
+                        </TableCell>
+                        <TableCell className="p-4">
+                          <Button type="button" onClick={handleAddItem} variant="outline" size="sm">
+                            <Plus className="h-4 w-4 mr-1" />
+                            Add
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    </TableFooter>
+                  </Table>
               </div>
             </CardContent>
           </Card>
           
           {/* Order Summary */}
-          <Card>
+          {/* <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Calculator className="h-5 w-5 mr-2" />
@@ -490,14 +526,32 @@ const PurchaseOrderCreate: React.FC = () => {
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
           
           {/* Additional Information */}
-          <Card>
+          {/* <Card>
             <CardHeader>
               <CardTitle>Additional Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="details"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Details</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Enter detailed description"
+                        className="min-h-[150px]"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
               <FormField
                 control={form.control}
                 name="notes"
@@ -535,13 +589,13 @@ const PurchaseOrderCreate: React.FC = () => {
               />
             </CardContent>
           </Card>
-          
+           */}
           {/* Actions */}
           <div className="flex items-center justify-end space-x-4">
             <Button type="button" variant="outline" onClick={handleCancel}>
               Cancel
             </Button>
-            <CreateButton
+            <CreateButton module="PurchaseOrderFleet"
               type="submit"
               disabled={isSubmitting}
               className="min-w-[120px]"
