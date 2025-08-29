@@ -11,6 +11,7 @@ import lposReducer from './slices/lposSlice';
 import customerReducer from './slices/customerSlice';
 import timesheetReducer from './slices/timesheetSlice';
 import fleetPurchasesReducer from './slices/fleetPurchasesSlice';
+import jobsReducer from './slices/jobsSlice';
 
 // Persist configuration
 const persistConfig = {
@@ -30,6 +31,7 @@ const rootReducer = combineReducers({
   customer: customerReducer,
   timesheet: timesheetReducer,
   fleetPurchases: fleetPurchasesReducer,
+  jobs: jobsReducer,
 });
 
 // Create persisted reducer
