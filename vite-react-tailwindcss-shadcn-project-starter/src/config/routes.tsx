@@ -8,6 +8,10 @@ import { Timesheet, ManageCheckin } from "../modules/timesheet";
 import { PurchaseOrderList, PurchaseOrderCreate, PurchaseOrderEdit, PurchaseOrderView, SupplierList, SupplierCreate, SupplierEdit, SupplierView, SupplierLedger, AddPaymentByFleet, FleetPurchases, ViewFleetPurchases, FleetReceiveShipping } from "../modules/fleet-purchases";
 import { JobsList, JobsView } from "../modules/jobs/components";
 import { RepairsList, RepairsEdit } from "../modules/repairs/components";
+import { WarehouseList, WarehouseCreate, WarehouseEdit, WarehouseManage } from "../modules/inventory/warehouse/components";
+import { ModelList, ModelCreate, ModelEdit } from "../modules/inventory/model/components";
+import { CategoryList, CategoryCreate, CategoryEdit } from "../modules/inventory/category/components";
+import { BrandList, BrandCreate, BrandEdit } from "../modules/inventory/brand/components";
 
 // Fleet Components
 import FleetCreate from '@/modules/fleet/components/FleetCreate';
@@ -256,6 +260,150 @@ export const allRoutes: RouteConfig[] = [
     access: ["admin"],
     action: ["update"]
   },
+
+  // Inventory - Warehouse Routes
+  {
+    url: "inventory/warehouse",
+    component: <WarehouseList />,
+    module: "INVENTORY",
+    name: "Warehouses",
+    access: ["admin", "manager"],
+    action: ["create", "read", "update", "delete"]
+  },
+  {
+    url: "inventory/warehouse/create",
+    component: <WarehouseCreate />,
+    module: "INVENTORY",
+    name: "Create Warehouse",
+    access: ["admin", "manager"],
+    action: ["create"]
+  },
+  {
+    url: "inventory/warehouse/view/:warehouseId",
+    component: <WarehouseEdit />,
+    module: "INVENTORY",
+    name: "View Warehouse",
+    access: ["admin", "manager", "employee"],
+    action: ["read"]
+  },
+  {
+    url: "inventory/warehouse/edit/:warehouseId",
+    component: <WarehouseEdit />,
+    module: "INVENTORY",
+    name: "Edit Warehouse",
+    access: ["admin", "manager"],
+    action: ["update"]
+  },
+  {
+     url: "inventory/warehouse/manage",
+     component: <WarehouseManage />,
+     module: "INVENTORY",
+     name: "Manage Warehouse Stock",
+     access: ["admin", "manager"],
+     action: ["create", "update"]
+   },
+
+   // Inventory - Model Routes
+   {
+     url: "inventory/model",
+     component: <ModelList />,
+     module: "INVENTORY",
+     name: "Models",
+     access: ["admin", "manager"],
+     action: ["create", "read", "update", "delete"]
+   },
+   {
+     url: "inventory/model/create",
+     component: <ModelCreate />,
+     module: "INVENTORY",
+     name: "Create Model",
+     access: ["admin", "manager"],
+     action: ["create"]
+   },
+   {
+     url: "inventory/model/view/:modelId",
+     component: <ModelEdit />,
+     module: "INVENTORY",
+     name: "View Model",
+     access: ["admin", "manager", "employee"],
+     action: ["read"]
+   },
+   {
+      url: "inventory/model/edit/:modelId",
+      component: <ModelEdit />,
+      module: "INVENTORY",
+      name: "Edit Model",
+      access: ["admin", "manager"],
+      action: ["update"]
+    },
+
+    // Inventory - Category Routes
+    {
+      url: "inventory/category",
+      component: <CategoryList />,
+      module: "INVENTORY",
+      name: "Categories",
+      access: ["admin", "manager"],
+      action: ["create", "read", "update", "delete"]
+    },
+    {
+      url: "inventory/category/create",
+      component: <CategoryCreate />,
+      module: "INVENTORY",
+      name: "Create Category",
+      access: ["admin", "manager"],
+      action: ["create"]
+    },
+    {
+      url: "inventory/category/view/:categoryId",
+      component: <CategoryEdit />,
+      module: "INVENTORY",
+      name: "View Category",
+      access: ["admin", "manager", "employee"],
+      action: ["read"]
+    },
+    {
+       url: "inventory/category/edit/:categoryId",
+       component: <CategoryEdit />,
+       module: "INVENTORY",
+       name: "Edit Category",
+       access: ["admin", "manager"],
+       action: ["update"]
+     },
+
+     // Inventory - Brand Routes
+     {
+       url: "inventory/brand",
+       component: <BrandList />,
+       module: "INVENTORY",
+       name: "Brands",
+       access: ["admin", "manager"],
+       action: ["create", "read", "update", "delete"]
+     },
+     {
+       url: "inventory/brand/create",
+       component: <BrandCreate />,
+       module: "INVENTORY",
+       name: "Create Brand",
+       access: ["admin", "manager"],
+       action: ["create"]
+     },
+     {
+       url: "inventory/brand/view/:brandId",
+       component: <BrandEdit />,
+       module: "INVENTORY",
+       name: "View Brand",
+       access: ["admin", "manager", "employee"],
+       action: ["read"]
+     },
+     {
+       url: "inventory/brand/edit/:brandId",
+       component: <BrandEdit />,
+       module: "INVENTORY",
+       name: "Edit Brand",
+       access: ["admin", "manager"],
+       action: ["update"]
+     },
   
   // Fleet Purchases Routes
   {

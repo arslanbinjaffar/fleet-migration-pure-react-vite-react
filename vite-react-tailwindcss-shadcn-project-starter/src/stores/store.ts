@@ -3,7 +3,11 @@ import { setupListeners } from '@reduxjs/toolkit/query';
 import { persistStore, persistReducer } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 import { combineReducers } from '@reduxjs/toolkit';
+
+// Import API slice
 import { apiSlice } from './api/apiSlice';
+
+// Import reducers
 import userReducer from './slices/userSlice';
 import authReducer from './slices/authSlice';
 import fleetReducer from './slices/fleetSlice';
@@ -13,7 +17,6 @@ import timesheetReducer from './slices/timesheetSlice';
 import fleetPurchasesReducer from './slices/fleetPurchasesSlice';
 import jobsReducer from './slices/jobsSlice';
 import repairsReducer from './slices/repairsSlice';
-import productsReducer from './slices/productsSlice';
 import productReducer from './slices/productSlice';
 import warehouseReducer from './slices/warehouseSlice';
 import categoryReducer from './slices/categorySlice';
@@ -22,13 +25,12 @@ import categoryReducer from './slices/categorySlice';
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist: ['auth', 'user'], // Only persist auth and user slices
-  blacklist: ['api'], // Don't persist API cache
+  whitelist: ['auth', 'user'], // Only persist auth and user data
 };
 
-// Combine reducers
+// Root reducer
 const rootReducer = combineReducers({
-  api: apiSlice.reducer,
+  [apiSlice.reducerPath]: apiSlice.reducer,
   user: userReducer,
   auth: authReducer,
   fleet: fleetReducer,
@@ -38,7 +40,6 @@ const rootReducer = combineReducers({
   fleetPurchases: fleetPurchasesReducer,
   jobs: jobsReducer,
   repairs: repairsReducer,
-  products: productsReducer,
   product: productReducer,
   warehouse: warehouseReducer,
   category: categoryReducer,

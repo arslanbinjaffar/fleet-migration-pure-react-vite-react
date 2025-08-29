@@ -6,9 +6,8 @@ import { Category } from '../api/categoryApiSlice';
 export interface CategoryState {
   // Data
   categories: Category[];
-  selectedCategory: Category | null;
+  currentCategory: Category | null;
   categoryTree: Category[];
-  rootCategories: Category[];
   searchResults: Category[];
   
   // Filters and Pagination
@@ -16,39 +15,52 @@ export interface CategoryState {
     search: string;
     parentCategoryId: string;
     isActive: boolean | null;
-    includeSubCategories: boolean;
+    hasProducts: boolean | null;
   };
+  
   pagination: {
-    page: number;
-    limit: number;
-    total: number;
+    currentPage: number;
+    itemsPerPage: number;
+    totalItems: number;
     totalPages: number;
   };
+  
+  // Sorting
   sorting: {
-    field: string;
+    field: 'name' | 'sortOrder' | 'createdAt' | 'productCount';
     direction: 'asc' | 'desc';
   };
   
   // Loading and Error States
   loading: {
     list: boolean;
+    tree: boolean;
     details: boolean;
     create: boolean;
     update: boolean;
     delete: boolean;
     search: boolean;
-    tree: boolean;
     reorder: boolean;
   };
+  
   error: {
     list: string | null;
+    tree: string | null;
     details: string | null;
     create: string | null;
     update: string | null;
     delete: string | null;
     search: string | null;
-    tree: string | null;
     reorder: string | null;
+  };
+  
+  // Statistics
+  statistics: {
+    totalCategories: number;
+    activeCategories: number;
+    inactiveCategories: number;
+    rootCategories: number;
+    maxDepth: number;
   };
 }
 
@@ -60,462 +72,568 @@ export interface CategoryUIState {
     edit: boolean;
     delete: boolean;
     view: boolean;
-    bulkDelete: boolean;
     move: boolean;
     reorder: boolean;
     imageUpload: boolean;
   };
   
-  // Panel and Drawer States
+  // Panel States
   panels: {
     filters: boolean;
     details: boolean;
     tree: boolean;
+    products: boolean;
   };
   
   // Selection States
-  selection: {
-    selectedIds: string[];
-    selectAll: boolean;
-  };
+  selectedCategories: string[];
+  activeCategoryId: string | null;
+  expandedCategories: string[];
   
   // View States
-  view: {
-    mode: 'tree' | 'list' | 'table' | 'grid';
-    density: 'compact' | 'comfortable' | 'spacious';
-    expandedNodes: string[];
-  };
+  viewMode: 'tree' | 'list' | 'grid' | 'table';
+  treeExpanded: boolean;
   
   // Form States
-  forms: {
-    create: {
-      isSubmitting: boolean;
-      isDirty: boolean;
-      parentCategoryId: string | null;
-    };
-    edit: {
-      isSubmitting: boolean;
-      isDirty: boolean;
-      categoryId: string | null;
-    };
-    move: {
-      isSubmitting: boolean;
-      categoryId: string | null;
-      newParentId: string | null;
-    };
+  formData: {
+    name: string;
+    description: string;
+    parentCategoryId: string;
+    isActive: boolean;
+    sortOrder: number;
+    imageUrl: string;
+  };
+  
+  // Bulk Operations
+  bulkOperations: {
+    isActive: boolean;
+    selectedCount: number;
+    operation: 'delete' | 'activate' | 'deactivate' | 'move' | 'export' | null;
+  };
+  
+  // Drag and Drop
+  dragDrop: {
+    isDragging: boolean;
+    draggedCategoryId: string | null;
+    dropTargetId: string | null;
+    dropPosition: 'before' | 'after' | 'inside' | null;
+  };
+  
+  // Reorder State
+  reorderMode: {
+    isActive: boolean;
+    pendingChanges: Array<{ categoryId: string; sortOrder: number }>;
   };
 }
 
 // Initial States
 const initialCategoryState: CategoryState = {
   categories: [],
-  selectedCategory: null,
+  currentCategory: null,
   categoryTree: [],
-  rootCategories: [],
   searchResults: [],
+  
   filters: {
     search: '',
     parentCategoryId: '',
     isActive: null,
-    includeSubCategories: false,
+    hasProducts: null,
   },
+  
   pagination: {
-    page: 1,
-    limit: 50,
-    total: 0,
+    currentPage: 1,
+    itemsPerPage: 20,
+    totalItems: 0,
     totalPages: 0,
   },
+  
   sorting: {
     field: 'sortOrder',
     direction: 'asc',
   },
+  
   loading: {
     list: false,
+    tree: false,
     details: false,
     create: false,
     update: false,
     delete: false,
     search: false,
-    tree: false,
     reorder: false,
   },
+  
   error: {
     list: null,
+    tree: null,
     details: null,
     create: null,
     update: null,
     delete: null,
     search: null,
-    tree: null,
     reorder: null,
+  },
+  
+  statistics: {
+    totalCategories: 0,
+    activeCategories: 0,
+    inactiveCategories: 0,
+    rootCategories: 0,
+    maxDepth: 0,
   },
 };
 
-const initialUIState: CategoryUIState = {
+const initialCategoryUIState: CategoryUIState = {
   modals: {
     create: false,
     edit: false,
     delete: false,
     view: false,
-    bulkDelete: false,
     move: false,
     reorder: false,
     imageUpload: false,
   },
+  
   panels: {
     filters: false,
     details: false,
     tree: true,
+    products: false,
   },
-  selection: {
-    selectedIds: [],
-    selectAll: false,
+  
+  selectedCategories: [],
+  activeCategoryId: null,
+  expandedCategories: [],
+  
+  viewMode: 'tree',
+  treeExpanded: true,
+  
+  formData: {
+    name: '',
+    description: '',
+    parentCategoryId: '',
+    isActive: true,
+    sortOrder: 0,
+    imageUrl: '',
   },
-  view: {
-    mode: 'tree',
-    density: 'comfortable',
-    expandedNodes: [],
+  
+  bulkOperations: {
+    isActive: false,
+    selectedCount: 0,
+    operation: null,
   },
-  forms: {
-    create: {
-      isSubmitting: false,
-      isDirty: false,
-      parentCategoryId: null,
-    },
-    edit: {
-      isSubmitting: false,
-      isDirty: false,
-      categoryId: null,
-    },
-    move: {
-      isSubmitting: false,
-      categoryId: null,
-      newParentId: null,
-    },
+  
+  dragDrop: {
+    isDragging: false,
+    draggedCategoryId: null,
+    dropTargetId: null,
+    dropPosition: null,
+  },
+  
+  reorderMode: {
+    isActive: false,
+    pendingChanges: [],
   },
 };
 
 // Category Slice
-export const categorySlice = createSlice({
+const categorySlice = createSlice({
   name: 'category',
   initialState: {
-    data: initialCategoryState,
-    ui: initialUIState,
+    ...initialCategoryState,
+    ui: initialCategoryUIState,
   },
   reducers: {
-    // Data Management
+    // Category Data Management
     setCategories: (state, action: PayloadAction<Category[]>) => {
-      state.data.categories = action.payload;
+      state.categories = action.payload;
     },
+    
+    setCategoryTree: (state, action: PayloadAction<Category[]>) => {
+      state.categoryTree = action.payload;
+    },
+    
     addCategory: (state, action: PayloadAction<Category>) => {
-      state.data.categories.unshift(action.payload);
+      state.categories.unshift(action.payload);
     },
+    
     updateCategory: (state, action: PayloadAction<Category>) => {
-      const index = state.data.categories.findIndex(c => c.categoryId === action.payload.categoryId);
+      const index = state.categories.findIndex(c => c.categoryId === action.payload.categoryId);
       if (index !== -1) {
-        state.data.categories[index] = action.payload;
+        state.categories[index] = action.payload;
+      }
+      if (state.currentCategory?.categoryId === action.payload.categoryId) {
+        state.currentCategory = action.payload;
       }
     },
+    
     removeCategory: (state, action: PayloadAction<string>) => {
-      state.data.categories = state.data.categories.filter(c => c.categoryId !== action.payload);
+      state.categories = state.categories.filter(c => c.categoryId !== action.payload);
+      if (state.currentCategory?.categoryId === action.payload) {
+        state.currentCategory = null;
+      }
     },
-    setSelectedCategory: (state, action: PayloadAction<Category | null>) => {
-      state.data.selectedCategory = action.payload;
+    
+    setCurrentCategory: (state, action: PayloadAction<Category | null>) => {
+      state.currentCategory = action.payload;
     },
-    setCategoryTree: (state, action: PayloadAction<Category[]>) => {
-      state.data.categoryTree = action.payload;
-    },
-    setRootCategories: (state, action: PayloadAction<Category[]>) => {
-      state.data.rootCategories = action.payload;
-    },
+    
     setSearchResults: (state, action: PayloadAction<Category[]>) => {
-      state.data.searchResults = action.payload;
+      state.searchResults = action.payload;
     },
     
     // Filter Management
     setFilters: (state, action: PayloadAction<Partial<CategoryState['filters']>>) => {
-      state.data.filters = { ...state.data.filters, ...action.payload };
+      state.filters = { ...state.filters, ...action.payload };
     },
+    
     resetFilters: (state) => {
-      state.data.filters = initialCategoryState.filters;
-    },
-    setSearchFilter: (state, action: PayloadAction<string>) => {
-      state.data.filters.search = action.payload;
-    },
-    setParentCategoryFilter: (state, action: PayloadAction<string>) => {
-      state.data.filters.parentCategoryId = action.payload;
-    },
-    setActiveFilter: (state, action: PayloadAction<boolean | null>) => {
-      state.data.filters.isActive = action.payload;
-    },
-    setIncludeSubCategoriesFilter: (state, action: PayloadAction<boolean>) => {
-      state.data.filters.includeSubCategories = action.payload;
+      state.filters = initialCategoryState.filters;
     },
     
     // Pagination Management
     setPagination: (state, action: PayloadAction<Partial<CategoryState['pagination']>>) => {
-      state.data.pagination = { ...state.data.pagination, ...action.payload };
-    },
-    setPage: (state, action: PayloadAction<number>) => {
-      state.data.pagination.page = action.payload;
-    },
-    setLimit: (state, action: PayloadAction<number>) => {
-      state.data.pagination.limit = action.payload;
+      state.pagination = { ...state.pagination, ...action.payload };
     },
     
     // Sorting Management
     setSorting: (state, action: PayloadAction<CategoryState['sorting']>) => {
-      state.data.sorting = action.payload;
+      state.sorting = action.payload;
     },
     
     // Loading States
     setLoading: (state, action: PayloadAction<{ key: keyof CategoryState['loading']; value: boolean }>) => {
-      state.data.loading[action.payload.key] = action.payload.value;
+      state.loading[action.payload.key] = action.payload.value;
     },
     
     // Error States
     setError: (state, action: PayloadAction<{ key: keyof CategoryState['error']; value: string | null }>) => {
-      state.data.error[action.payload.key] = action.payload.value;
+      state.error[action.payload.key] = action.payload.value;
     },
+    
     clearErrors: (state) => {
-      state.data.error = initialCategoryState.error;
+      state.error = initialCategoryState.error;
+    },
+    
+    // Statistics Management
+    setStatistics: (state, action: PayloadAction<Partial<CategoryState['statistics']>>) => {
+      state.statistics = { ...state.statistics, ...action.payload };
     },
     
     // UI State Management
-    toggleModal: (state, action: PayloadAction<keyof CategoryUIState['modals']>) => {
-      state.ui.modals[action.payload] = !state.ui.modals[action.payload];
-    },
-    setModal: (state, action: PayloadAction<{ modal: keyof CategoryUIState['modals']; open: boolean }>) => {
-      state.ui.modals[action.payload.modal] = action.payload.open;
-    },
-    closeAllModals: (state) => {
-      state.ui.modals = initialUIState.modals;
+    toggleModal: (state, action: PayloadAction<{ modal: keyof CategoryUIState['modals']; isOpen?: boolean }>) => {
+      const { modal, isOpen } = action.payload;
+      state.ui.modals[modal] = isOpen !== undefined ? isOpen : !state.ui.modals[modal];
     },
     
-    togglePanel: (state, action: PayloadAction<keyof CategoryUIState['panels']>) => {
-      state.ui.panels[action.payload] = !state.ui.panels[action.payload];
+    togglePanel: (state, action: PayloadAction<{ panel: keyof CategoryUIState['panels']; isOpen?: boolean }>) => {
+      const { panel, isOpen } = action.payload;
+      state.ui.panels[panel] = isOpen !== undefined ? isOpen : !state.ui.panels[panel];
     },
-    setPanel: (state, action: PayloadAction<{ panel: keyof CategoryUIState['panels']; open: boolean }>) => {
-      state.ui.panels[action.payload.panel] = action.payload.open;
+    
+    setActiveCategory: (state, action: PayloadAction<string | null>) => {
+      state.ui.activeCategoryId = action.payload;
+    },
+    
+    setViewMode: (state, action: PayloadAction<CategoryUIState['viewMode']>) => {
+      state.ui.viewMode = action.payload;
+    },
+    
+    // Tree Management
+    toggleCategoryExpansion: (state, action: PayloadAction<string>) => {
+      const categoryId = action.payload;
+      const index = state.ui.expandedCategories.indexOf(categoryId);
+      
+      if (index === -1) {
+        state.ui.expandedCategories.push(categoryId);
+      } else {
+        state.ui.expandedCategories.splice(index, 1);
+      }
+    },
+    
+    expandAllCategories: (state) => {
+      state.ui.expandedCategories = state.categories.map(c => c.categoryId);
+      state.ui.treeExpanded = true;
+    },
+    
+    collapseAllCategories: (state) => {
+      state.ui.expandedCategories = [];
+      state.ui.treeExpanded = false;
     },
     
     // Selection Management
-    toggleSelection: (state, action: PayloadAction<string>) => {
-      const id = action.payload;
-      const index = state.ui.selection.selectedIds.indexOf(id);
+    toggleCategorySelection: (state, action: PayloadAction<string>) => {
+      const categoryId = action.payload;
+      const index = state.ui.selectedCategories.indexOf(categoryId);
+      
       if (index === -1) {
-        state.ui.selection.selectedIds.push(id);
+        state.ui.selectedCategories.push(categoryId);
       } else {
-        state.ui.selection.selectedIds.splice(index, 1);
+        state.ui.selectedCategories.splice(index, 1);
       }
+      
+      state.ui.bulkOperations.selectedCount = state.ui.selectedCategories.length;
+      state.ui.bulkOperations.isActive = state.ui.selectedCategories.length > 0;
     },
-    setSelection: (state, action: PayloadAction<string[]>) => {
-      state.ui.selection.selectedIds = action.payload;
+    
+    selectAllCategories: (state) => {
+      state.ui.selectedCategories = state.categories.map(c => c.categoryId);
+      state.ui.bulkOperations.selectedCount = state.ui.selectedCategories.length;
+      state.ui.bulkOperations.isActive = true;
     },
+    
     clearSelection: (state) => {
-      state.ui.selection.selectedIds = [];
-      state.ui.selection.selectAll = false;
-    },
-    toggleSelectAll: (state) => {
-      state.ui.selection.selectAll = !state.ui.selection.selectAll;
-      if (state.ui.selection.selectAll) {
-        state.ui.selection.selectedIds = state.data.categories.map(c => c.categoryId);
-      } else {
-        state.ui.selection.selectedIds = [];
-      }
-    },
-    
-    // View Management
-    setViewMode: (state, action: PayloadAction<CategoryUIState['view']['mode']>) => {
-      state.ui.view.mode = action.payload;
-    },
-    setViewDensity: (state, action: PayloadAction<CategoryUIState['view']['density']>) => {
-      state.ui.view.density = action.payload;
-    },
-    
-    // Tree Node Management
-    toggleNodeExpansion: (state, action: PayloadAction<string>) => {
-      const nodeId = action.payload;
-      const index = state.ui.view.expandedNodes.indexOf(nodeId);
-      if (index === -1) {
-        state.ui.view.expandedNodes.push(nodeId);
-      } else {
-        state.ui.view.expandedNodes.splice(index, 1);
-      }
-    },
-    setExpandedNodes: (state, action: PayloadAction<string[]>) => {
-      state.ui.view.expandedNodes = action.payload;
-    },
-    expandAllNodes: (state) => {
-      state.ui.view.expandedNodes = state.data.categories.map(c => c.categoryId);
-    },
-    collapseAllNodes: (state) => {
-      state.ui.view.expandedNodes = [];
+      state.ui.selectedCategories = [];
+      state.ui.bulkOperations.selectedCount = 0;
+      state.ui.bulkOperations.isActive = false;
+      state.ui.bulkOperations.operation = null;
     },
     
     // Form Management
-    setFormState: (state, action: PayloadAction<{ form: 'create' | 'edit' | 'move'; field: string; value: any }>) => {
-      const { form, field, value } = action.payload;
-      (state.ui.forms[form] as any)[field] = value;
-    },
-    resetFormState: (state, action: PayloadAction<'create' | 'edit' | 'move'>) => {
-      state.ui.forms[action.payload] = initialUIState.forms[action.payload];
+    setFormData: (state, action: PayloadAction<Partial<CategoryUIState['formData']>>) => {
+      state.ui.formData = { ...state.ui.formData, ...action.payload };
     },
     
-    // Category Hierarchy Management
-    moveCategory: (state, action: PayloadAction<{ categoryId: string; newParentId: string | null }>) => {
-      const { categoryId, newParentId } = action.payload;
-      const category = state.data.categories.find(c => c.categoryId === categoryId);
-      if (category) {
-        category.parentCategoryId = newParentId || undefined;
+    resetFormData: (state) => {
+      state.ui.formData = initialCategoryUIState.formData;
+    },
+    
+    // Bulk Operations
+    setBulkOperation: (state, action: PayloadAction<CategoryUIState['bulkOperations']['operation']>) => {
+      state.ui.bulkOperations.operation = action.payload;
+    },
+    
+    // Drag and Drop Management
+    startDrag: (state, action: PayloadAction<string>) => {
+      state.ui.dragDrop.isDragging = true;
+      state.ui.dragDrop.draggedCategoryId = action.payload;
+    },
+    
+    setDropTarget: (state, action: PayloadAction<{ targetId: string; position: 'before' | 'after' | 'inside' }>) => {
+      state.ui.dragDrop.dropTargetId = action.payload.targetId;
+      state.ui.dragDrop.dropPosition = action.payload.position;
+    },
+    
+    endDrag: (state) => {
+      state.ui.dragDrop.isDragging = false;
+      state.ui.dragDrop.draggedCategoryId = null;
+      state.ui.dragDrop.dropTargetId = null;
+      state.ui.dragDrop.dropPosition = null;
+    },
+    
+    // Reorder Management
+    toggleReorderMode: (state) => {
+      state.ui.reorderMode.isActive = !state.ui.reorderMode.isActive;
+      if (!state.ui.reorderMode.isActive) {
+        state.ui.reorderMode.pendingChanges = [];
       }
     },
     
-    // Reorder Categories
-    reorderCategories: (state, action: PayloadAction<Array<{ categoryId: string; sortOrder: number }>>) => {
-      const reorderData = action.payload;
-      reorderData.forEach(({ categoryId, sortOrder }) => {
-        const category = state.data.categories.find(c => c.categoryId === categoryId);
-        if (category) {
-          category.sortOrder = sortOrder;
-        }
-      });
-      // Sort categories by sortOrder
-      state.data.categories.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    addReorderChange: (state, action: PayloadAction<{ categoryId: string; sortOrder: number }>) => {
+      const { categoryId, sortOrder } = action.payload;
+      const existingIndex = state.ui.reorderMode.pendingChanges.findIndex(c => c.categoryId === categoryId);
+      
+      if (existingIndex !== -1) {
+        state.ui.reorderMode.pendingChanges[existingIndex].sortOrder = sortOrder;
+      } else {
+        state.ui.reorderMode.pendingChanges.push({ categoryId, sortOrder });
+      }
+    },
+    
+    clearReorderChanges: (state) => {
+      state.ui.reorderMode.pendingChanges = [];
     },
     
     // Reset State
     resetCategoryState: (state) => {
-      state.data = initialCategoryState;
-      state.ui = initialUIState;
+      Object.assign(state, {
+        ...initialCategoryState,
+        ui: initialCategoryUIState,
+      });
     },
   },
 });
 
 // Export actions
 export const {
-  // Data actions
   setCategories,
+  setCategoryTree,
   addCategory,
   updateCategory,
   removeCategory,
-  setSelectedCategory,
-  setCategoryTree,
-  setRootCategories,
+  setCurrentCategory,
   setSearchResults,
-  
-  // Filter actions
   setFilters,
   resetFilters,
-  setSearchFilter,
-  setParentCategoryFilter,
-  setActiveFilter,
-  setIncludeSubCategoriesFilter,
-  
-  // Pagination actions
   setPagination,
-  setPage,
-  setLimit,
-  
-  // Sorting actions
   setSorting,
-  
-  // Loading and error actions
   setLoading,
   setError,
   clearErrors,
-  
-  // UI actions
+  setStatistics,
   toggleModal,
-  setModal,
-  closeAllModals,
   togglePanel,
-  setPanel,
-  
-  // Selection actions
-  toggleSelection,
-  setSelection,
-  clearSelection,
-  toggleSelectAll,
-  
-  // View actions
+  setActiveCategory,
   setViewMode,
-  setViewDensity,
-  
-  // Tree actions
-  toggleNodeExpansion,
-  setExpandedNodes,
-  expandAllNodes,
-  collapseAllNodes,
-  
-  // Form actions
-  setFormState,
-  resetFormState,
-  
-  // Hierarchy actions
-  moveCategory,
-  reorderCategories,
-  
-  // Reset actions
+  toggleCategoryExpansion,
+  expandAllCategories,
+  collapseAllCategories,
+  toggleCategorySelection,
+  selectAllCategories,
+  clearSelection,
+  setFormData,
+  resetFormData,
+  setBulkOperation,
+  startDrag,
+  setDropTarget,
+  endDrag,
+  toggleReorderMode,
+  addReorderChange,
+  clearReorderChanges,
   resetCategoryState,
 } = categorySlice.actions;
 
 // Selectors
-export const selectCategoryData = (state: RootState) => state.category.data;
-export const selectCategoryUI = (state: RootState) => state.category.ui;
-export const selectCategories = (state: RootState) => state.category.data.categories;
-export const selectSelectedCategory = (state: RootState) => state.category.data.selectedCategory;
-export const selectCategoryTree = (state: RootState) => state.category.data.categoryTree;
-export const selectRootCategories = (state: RootState) => state.category.data.rootCategories;
-export const selectCategoryFilters = (state: RootState) => state.category.data.filters;
-export const selectCategoryPagination = (state: RootState) => state.category.data.pagination;
-export const selectCategorySorting = (state: RootState) => state.category.data.sorting;
-export const selectCategoryLoading = (state: RootState) => state.category.data.loading;
-export const selectCategoryError = (state: RootState) => state.category.data.error;
-export const selectCategoryModals = (state: RootState) => state.category.ui.modals;
-export const selectCategorySelection = (state: RootState) => state.category.ui.selection;
-export const selectCategoryView = (state: RootState) => state.category.ui.view;
-export const selectExpandedNodes = (state: RootState) => state.category.ui.view.expandedNodes;
+export const selectCategories = (state: RootState) => state.category.categories;
+export const selectCategoryTree = (state: RootState) => state.category.categoryTree;
+export const selectCurrentCategory = (state: RootState) => state.category.currentCategory;
+export const selectSearchResults = (state: RootState) => state.category.searchResults;
+export const selectCategoryFilters = (state: RootState) => state.category.filters;
+export const selectCategoryPagination = (state: RootState) => state.category.pagination;
+export const selectCategorySorting = (state: RootState) => state.category.sorting;
+export const selectCategoryLoading = (state: RootState) => state.category.loading;
+export const selectCategoryError = (state: RootState) => state.category.error;
+export const selectCategoryStatistics = (state: RootState) => state.category.statistics;
 
-// Complex selectors
+// UI Selectors
+export const selectCategoryUI = (state: RootState) => state.category.ui;
+export const selectCategoryModals = (state: RootState) => state.category.ui.modals;
+export const selectCategoryPanels = (state: RootState) => state.category.ui.panels;
+export const selectSelectedCategories = (state: RootState) => state.category.ui.selectedCategories;
+export const selectActiveCategoryId = (state: RootState) => state.category.ui.activeCategoryId;
+export const selectExpandedCategories = (state: RootState) => state.category.ui.expandedCategories;
+export const selectCategoryViewMode = (state: RootState) => state.category.ui.viewMode;
+export const selectCategoryFormData = (state: RootState) => state.category.ui.formData;
+export const selectCategoryBulkOperations = (state: RootState) => state.category.ui.bulkOperations;
+export const selectCategoryDragDrop = (state: RootState) => state.category.ui.dragDrop;
+export const selectCategoryReorderMode = (state: RootState) => state.category.ui.reorderMode;
+
+// Computed Selectors
 export const selectFilteredCategories = (state: RootState) => {
-  const { categories, filters } = state.category.data;
-  return categories.filter(category => {
-    if (filters.search && !category.name.toLowerCase().includes(filters.search.toLowerCase())) {
-      return false;
+  const { categories, filters, sorting } = state.category;
+  
+  let filtered = categories.filter(category => {
+    // Search filter
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      if (!category.name.toLowerCase().includes(searchLower) &&
+          !category.description?.toLowerCase().includes(searchLower)) {
+        return false;
+      }
     }
+    
+    // Parent category filter
     if (filters.parentCategoryId && category.parentCategoryId !== filters.parentCategoryId) {
       return false;
     }
+    
+    // Active status filter
     if (filters.isActive !== null && category.isActive !== filters.isActive) {
       return false;
     }
+    
+    // Has products filter
+    if (filters.hasProducts !== null) {
+      const hasProducts = (category.productCount || 0) > 0;
+      if (filters.hasProducts !== hasProducts) {
+        return false;
+      }
+    }
+    
     return true;
   });
+  
+  // Apply sorting
+  filtered.sort((a, b) => {
+    const aValue = a[sorting.field];
+    const bValue = b[sorting.field];
+    
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      return sorting.direction === 'asc' 
+        ? aValue.localeCompare(bValue)
+        : bValue.localeCompare(aValue);
+    }
+    
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      return sorting.direction === 'asc' 
+        ? aValue - bValue
+        : bValue - aValue;
+    }
+    
+    return 0;
+  });
+  
+  return filtered;
 };
 
-export const selectSelectedCategories = (state: RootState) => {
-  const { categories } = state.category.data;
-  const { selectedIds } = state.category.ui.selection;
-  return categories.filter(category => selectedIds.includes(category.categoryId));
+export const selectPaginatedCategories = (state: RootState) => {
+  const filtered = selectFilteredCategories(state);
+  const { currentPage, itemsPerPage } = state.category.pagination;
+  
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  
+  return filtered.slice(startIndex, endIndex);
 };
 
-export const selectIsCategorySelected = (categoryId: string) => (state: RootState) => {
-  return state.category.ui.selection.selectedIds.includes(categoryId);
+export const selectCategoryById = (state: RootState, categoryId: string) => {
+  return state.category.categories.find(c => c.categoryId === categoryId);
 };
 
-export const selectIsNodeExpanded = (nodeId: string) => (state: RootState) => {
-  return state.category.ui.view.expandedNodes.includes(nodeId);
+export const selectIsCategorySelected = (state: RootState, categoryId: string) => {
+  return state.category.ui.selectedCategories.includes(categoryId);
+};
+
+export const selectIsCategoryExpanded = (state: RootState, categoryId: string) => {
+  return state.category.ui.expandedCategories.includes(categoryId);
+};
+
+export const selectRootCategories = (state: RootState) => {
+  return state.category.categories.filter(c => !c.parentCategoryId);
 };
 
 export const selectActiveCategories = (state: RootState) => {
-  return state.category.data.categories.filter(category => category.isActive);
+  return state.category.categories.filter(c => c.isActive);
 };
 
-export const selectCategoriesByParent = (parentId: string | null) => (state: RootState) => {
-  return state.category.data.categories.filter(category => 
-    parentId ? category.parentCategoryId === parentId : !category.parentCategoryId
-  );
+export const selectCategoryOptions = (state: RootState) => {
+  return state.category.categories
+    .filter(c => c.isActive)
+    .map(c => ({
+      value: c.categoryId,
+      label: c.name,
+      parentId: c.parentCategoryId,
+    }));
+};
+
+export const selectSubCategories = (state: RootState, parentId: string) => {
+  return state.category.categories.filter(c => c.parentCategoryId === parentId);
+};
+
+export const selectCategoryPath = (state: RootState, categoryId: string): Category[] => {
+  const path: Category[] = [];
+  let currentCategory = state.category.categories.find(c => c.categoryId === categoryId);
+  
+  while (currentCategory) {
+    path.unshift(currentCategory);
+    if (currentCategory.parentCategoryId) {
+      currentCategory = state.category.categories.find(c => c.categoryId === currentCategory!.parentCategoryId);
+    } else {
+      break;
+    }
+  }
+  
+  return path;
 };
 
 // Export reducer
