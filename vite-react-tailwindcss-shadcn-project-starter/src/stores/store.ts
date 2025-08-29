@@ -12,6 +12,11 @@ import customerReducer from './slices/customerSlice';
 import timesheetReducer from './slices/timesheetSlice';
 import fleetPurchasesReducer from './slices/fleetPurchasesSlice';
 import jobsReducer from './slices/jobsSlice';
+import repairsReducer from './slices/repairsSlice';
+import productsReducer from './slices/productsSlice';
+import productReducer from './slices/productSlice';
+import warehouseReducer from './slices/warehouseSlice';
+import categoryReducer from './slices/categorySlice';
 
 // Persist configuration
 const persistConfig = {
@@ -32,6 +37,11 @@ const rootReducer = combineReducers({
   timesheet: timesheetReducer,
   fleetPurchases: fleetPurchasesReducer,
   jobs: jobsReducer,
+  repairs: repairsReducer,
+  products: productsReducer,
+  product: productReducer,
+  warehouse: warehouseReducer,
+  category: categoryReducer,
 });
 
 // Create persisted reducer

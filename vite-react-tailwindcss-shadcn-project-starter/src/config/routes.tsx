@@ -6,6 +6,8 @@ import { LposList, LposView, LposEdit, LposCreate, LpoPdfView } from "../modules
 import { CustomerList, CustomerCreate, CustomerEdit, CustomerView, CustomerLedger } from "../modules/customer";
 import { Timesheet, ManageCheckin } from "../modules/timesheet";
 import { PurchaseOrderList, PurchaseOrderCreate, PurchaseOrderEdit, PurchaseOrderView, SupplierList, SupplierCreate, SupplierEdit, SupplierView, SupplierLedger, AddPaymentByFleet, FleetPurchases, ViewFleetPurchases, FleetReceiveShipping } from "../modules/fleet-purchases";
+import { JobsList, JobsView } from "../modules/jobs/components";
+import { RepairsList, RepairsEdit } from "../modules/repairs/components";
 
 // Fleet Components
 import FleetCreate from '@/modules/fleet/components/FleetCreate';
@@ -222,21 +224,37 @@ export const allRoutes: RouteConfig[] = [
   // Jobs Routes
   {
     url: "jobs",
-    component: <div>Jobs Component</div>, // Placeholder
+    component: <JobsList />,
     module: "GOM",
     name: "Jobs",
-    access: ["admin"],
+    access: ["admin", "manager", "employee"],
     action: ["create", "read", "update", "delete"]
+  },
+  {
+    url: "jobs/view/:jobId",
+    component: <JobsView />,
+    module: "GOM",
+    name: "View Job",
+    access: ["admin", "manager", "employee"],
+    action: ["read"]
   },
   
   // Repairs Routes
   {
     url: "repairs",
-    component: <div>Repairs Component</div>, // Placeholder
+    component: <RepairsList />,
     module: "GOM",
     name: "Repairs",
     access: ["admin"],
     action: ["create", "read", "update", "delete"]
+  },
+  {
+    url: "repairs/edit/:repairId",
+    component: <RepairsEdit />,
+    module: "GOM",
+    name: "Edit Repair",
+    access: ["admin"],
+    action: ["update"]
   },
   
   // Fleet Purchases Routes

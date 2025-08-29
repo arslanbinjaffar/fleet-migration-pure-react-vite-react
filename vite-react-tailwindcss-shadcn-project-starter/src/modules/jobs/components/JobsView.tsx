@@ -6,7 +6,7 @@ import {
   User,
   Car,
   Wrench,
-  FileInvoice,
+
   Receipt,
   Calendar,
   Phone,
@@ -19,7 +19,7 @@ import {
   ClipboardCheck,
   DollarSign,
 } from 'lucide-react';
-
+import {FaFileInvoice} from "react-icons/fa"
 // UI Components
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -40,7 +40,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 
 // Store and API
 import { useGetJobDetailsQuery } from '@/stores/api/jobsApiSlice';
@@ -401,7 +401,7 @@ const JobsView: React.FC<JobsViewProps> = ({ className }) => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <FileInvoice className="h-5 w-5 text-primary" />
+                  <FaFileInvoice className="h-5 w-5 text-primary" />
                   Invoice Summary
                 </CardTitle>
               </CardHeader>
