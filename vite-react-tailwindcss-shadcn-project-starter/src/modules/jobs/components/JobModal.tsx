@@ -72,19 +72,12 @@ import {
 import type { JobFormData } from '../schemas/jobSchema';
 import { jobSchema } from '../schemas/jobSchema';
 import { SELECTION_MODE_OPTIONS } from '../constants';
-
-// Mock technician options (in real app, this would come from API)
-const MOCK_TECHNICIANS = [
-  { userId: '1', firstName: 'John', lastName: 'Smith' },
-  { userId: '2', firstName: 'Jane', lastName: 'Doe' },
-  { userId: '3', firstName: 'Mike', lastName: 'Johnson' },
-  { userId: '4', firstName: 'Sarah', lastName: 'Wilson' },
-];
+import { useShiftDetails, type Technician } from '@/utils/useShiftDetails';
 
 const JobModal: React.FC = () => {
   const dispatch = useDispatch();
   const { toast } = useToast();
-
+  const { options, isLoading: isShiftDetailsLoading, isError: isShiftDetailsError, refetch: refetchShiftDetails } = useShiftDetails();
   // Selectors
   const isCreateModalOpen = useSelector(selectIsCreateJobModalOpen);
   const isEditModalOpen = useSelector(selectIsEditJobModalOpen);
@@ -100,7 +93,21 @@ const JobModal: React.FC = () => {
   const { data: customersData } = useGetCustomersQuery({ page: 1, limit: 100 });
   const { data: fleetsData } = useGetFleetsQuery({ page: 1, limit: 100 });
 
+  // Get technicians from shift details
+  const technicians: Technician[] = options.technician || [];
+
   const isLoading = isCreating || isUpdating;
+
+  // Handle shift details error
+  useEffect(() => {
+    if (isShiftDetailsError) {
+      toast({
+        title: 'Error',
+        description: 'Failed to load shift details. Some options may not be available.',
+        variant: 'destructive',
+      });
+    }
+  }, [isShiftDetailsError, toast]);
 
   // Form setup
   const form = useForm<JobFormData>({
@@ -138,6 +145,7 @@ const JobModal: React.FC = () => {
     if (isOpen) {
       if (isEditMode && currentJob) {
         // Pre-fill form with current job data
+
         const customerMode = currentJob.customerId ? 'auto' : 'manual';
         const machineMode = currentJob.fleetId ? 'auto' : 'manual';
         const technicianMode = currentJob.manualTechnician ? 'manual' : 'auto';
@@ -199,6 +207,7 @@ const JobModal: React.FC = () => {
           description: 'Job updated successfully',
         });
       } else {
+        console.log(data,"data")
         await createJob(data).unwrap();
         
         toast({
@@ -600,15 +609,31 @@ const JobModal: React.FC = () => {
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select technician (optional)" />
+                              <SelectValue placeholder={
+                                isShiftDetailsLoading 
+                                  ? "Loading technicians..." 
+                                  : technicians.length === 0 
+                                    ? "No technicians available" 
+                                    : "Select technician (optional)"
+                              } />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {MOCK_TECHNICIANS.map((technician) => (
-                              <SelectItem key={technician.userId} value={technician.userId}>
-                                {`${technician.firstName} ${technician.lastName}`}
+                            {isShiftDetailsLoading ? (
+                              <SelectItem value="loading" disabled>
+                                Loading technicians...
                               </SelectItem>
-                            ))}
+                            ) : technicians.length === 0 ? (
+                              <SelectItem value="no-data" disabled>
+                                No technicians available
+                              </SelectItem>
+                            ) : (
+                              technicians.map((technician) => (
+                                <SelectItem key={technician.userId} value={technician.userId}>
+                                  {`${technician.firstName} ${technician.lastName}`}
+                                </SelectItem>
+                              ))
+                            )}
                           </SelectContent>
                         </Select>
                         <FormMessage />

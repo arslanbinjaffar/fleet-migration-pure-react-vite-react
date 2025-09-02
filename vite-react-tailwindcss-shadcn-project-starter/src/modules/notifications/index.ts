@@ -24,6 +24,6 @@ export {
   useGetNotificationByIdQuery,
   useMarkNotificationAsReadMutation,
   useMarkAllNotificationsAsReadMutation,
-  // useRegisterFCMTokenMutation,
-  // useUnregisterFCMTokenMutation,
+  useRegisterFCMTokenMutation,
+  useUnregisterFCMTokenMutation,
 } from '../../stores/api/notifications/notificationApiSlice';

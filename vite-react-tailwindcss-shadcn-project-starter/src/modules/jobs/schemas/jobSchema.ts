@@ -37,7 +37,7 @@ const descriptionSchema = z
 // Job creation/update schema
 export const jobSchema = z.object({
   // Customer selection
-  customerSelectionMode: z.enum(['auto', 'manual']).default('auto'),
+  customerSelectionMode: z.enum(['auto', 'manual']),
   customerId: z.string().uuid().optional(),
   customerFirstname: nameSchema,
   customerLastname: nameSchema,
@@ -45,7 +45,7 @@ export const jobSchema = z.object({
   customerPhone: phoneSchema,
   
   // Machine selection
-  machineSelectionMode: z.enum(['auto', 'manual']).default('auto'),
+  machineSelectionMode: z.enum(['auto', 'manual']),
   fleetId: z.string().uuid().optional(),
   machineName: nameSchema,
   machineType: nameSchema,
@@ -57,8 +57,8 @@ export const jobSchema = z.object({
   serviceArea: z.string().optional(),
   fleetbyTbcJobId: z.string().optional(),
   
-  // Technician assignment
-  technicianSelectionMode: z.enum(['auto', 'manual']).default('auto'),
+  // Technician selection
+  technicianSelectionMode: z.enum(['auto', 'manual']),
   technician: z.string().uuid().optional(),
   manualTechnicianName: nameSchema,
   manualTechnicianEmail: emailSchema,

@@ -41,16 +41,24 @@ export interface Customer {
 export interface SiteProject {
   siteProjectId: string;
   projectName: string;
+  projectOwner: string;
   mainClient: string;
+  mainContractor: string;
+  subContractor: string;
+  serviceProvider: string;
+  typeOfProject: string;
   location: string;
   description: string;
   startDate: string;
   endDate: string;
+  expiryDate: string;
+  subProject: string;
+  zone: string;
+  zonalSite: string;
+  projectColor: string;
   status: string;
   createdAt: string;
   updatedAt: string;
-  zonalSite:string;
-  mainContractor:string
 }
 
 export interface Fleet {
@@ -105,9 +113,26 @@ export interface LPOsResponse {
   limit: number;
 }
 
+export interface SiteProjectFleet {
+  siteProjectFLeetId: string;
+  siteProjectId: string;
+  fleetId: string;
+  lpoId: string;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+  fleet: {
+    fleetId: string;
+    plateNumber: string;
+    vehicleName: string;
+    hourlyRate: number;
+  };
+}
+
 export interface LPOResponse {
   lpo: LPO;
   fleets: Fleet[];
+  siteProjectFleets?: SiteProjectFleet[];
 }
 
 // Filter Types

@@ -10,7 +10,7 @@ export const apiSlice = createApi({
     baseUrl,
     prepareHeaders: (headers, { getState, endpoint, type, extraOptions }) => {
       // Add auth token if available
-      const token = (getState() as any).user?.token;
+      const token = (getState() as any).user?.token || localStorage.getItem("token");
       if (token) {
         headers.set('authorization', `${token}`);
       }
@@ -23,7 +23,7 @@ export const apiSlice = createApi({
       return headers;
     },
   }),
-  tagTypes: ['User', 'Dashboard', 'HRM', 'MRM', 'Finance', 'GOM', 'Roles', 'Model','Notification', 'Brand'],
+  tagTypes: ['User', 'Dashboard', 'HRM', 'MRM', 'Finance', 'GOM', 'Roles', 'Model','Notification', 'Brand', 'FleetType', 'SiteProject'],
   endpoints: (builder) => ({
     // Example endpoint - you can add more as needed
     getUsers: builder.query<any[], void>({
@@ -57,6 +57,18 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ['User'],
     }),
+getShiftDetails: builder.query<{
+  siteProjects: any[];
+  fleets: any[];
+  technician: any[];
+}, void>({
+  query: () => 'shedule-shift/shift-related-details',
+  transformResponse: (response: any) => ({
+    siteProjects: response.siteProjects || [],
+    fleets: response.fleets || [],
+    technician: response.technician || [],
+  }),
+}),
   }),
 });
 
@@ -67,4 +79,5 @@ export const {
   useCreateUserMutation,
   useUpdateUserMutation,
   useDeleteUserMutation,
+  useGetShiftDetailsQuery,
 } = apiSlice;

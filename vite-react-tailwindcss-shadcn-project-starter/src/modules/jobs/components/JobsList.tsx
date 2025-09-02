@@ -148,7 +148,7 @@ const JobsList: React.FC<JobsListProps> = ({ className }) => {
 
   // Memoized filtered and sorted jobs
   const processedJobs = useMemo(() => {
-    let filteredJobs = filterJobs(jobs.jobs || [], searchQuery);
+    let filteredJobs = filterJobs(jobsData?.jobs || jobs.jobs || [], searchQuery);
     
     // Apply assignment filter
     if (filters.assignmentFilter && filters.assignmentFilter !== 'all') {

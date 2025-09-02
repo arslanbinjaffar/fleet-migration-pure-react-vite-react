@@ -27,14 +27,7 @@ import {
 // Types and utilities
 import type { Job } from '../types';
 import { getTechnicianDisplayName, isTechnicianAssigned } from '../utils';
-
-// Mock technician options (in real app, this would come from API)
-const MOCK_TECHNICIANS = [
-  { userId: '1', firstName: 'John', lastName: 'Smith' },
-  { userId: '2', firstName: 'Jane', lastName: 'Doe' },
-  { userId: '3', firstName: 'Mike', lastName: 'Johnson' },
-  { userId: '4', firstName: 'Sarah', lastName: 'Wilson' },
-];
+import { useShiftDetails } from '@/utils/useShiftDetails';
 
 interface TechnicianDropdownProps {
   job: Job;
@@ -48,10 +41,11 @@ const TechnicianDropdown: React.FC<TechnicianDropdownProps> = ({ job, className 
   // API hooks
   const [assignTechnician, { isLoading: isAssigning }] = useAssignTechnicianMutation();
   const [clearTechnician, { isLoading: isClearing }] = useClearTechnicianMutation();
+  const { options, isLoading: isLoadingTechnicians } = useShiftDetails();
 
   const currentTechnician = getTechnicianDisplayName(job);
   const isAssigned = isTechnicianAssigned(job);
-  const isLoading = isAssigning || isClearing;
+  const isLoading = isAssigning || isClearing || isLoadingTechnicians;
 
   // Handle technician assignment
   const handleAssignTechnician = async (technicianId: string) => {
@@ -61,7 +55,7 @@ const TechnicianDropdown: React.FC<TechnicianDropdownProps> = ({ job, className 
         technicianId,
       }).unwrap();
       
-      const technician = MOCK_TECHNICIANS.find(t => t.userId === technicianId);
+      const technician = options.technician.find(t => t.userId === technicianId);
       toast({
         title: 'Success',
         description: `Technician ${technician?.firstName} ${technician?.lastName} assigned successfully`,
@@ -150,7 +144,22 @@ const TechnicianDropdown: React.FC<TechnicianDropdownProps> = ({ job, className 
         <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
           System Technicians
         </div>
-        {MOCK_TECHNICIANS.map((technician) => {
+        {isLoadingTechnicians ? (
+          <DropdownMenuItem disabled>
+            <div className="flex items-center gap-2">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+              <span>Loading technicians...</span>
+            </div>
+          </DropdownMenuItem>
+        ) : options.technician.length === 0 ? (
+          <DropdownMenuItem disabled>
+            <div className="flex items-center gap-2">
+              <UserX className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">No technicians available</span>
+            </div>
+          </DropdownMenuItem>
+        ) : (
+          options.technician.map((technician) => {
           const isCurrentTechnician = job.technician === technician.userId;
           return (
             <DropdownMenuItem
@@ -170,7 +179,8 @@ const TechnicianDropdown: React.FC<TechnicianDropdownProps> = ({ job, className 
               </div>
             </DropdownMenuItem>
           );
-        })}
+        })
+        )}
         
         <DropdownMenuSeparator />
         

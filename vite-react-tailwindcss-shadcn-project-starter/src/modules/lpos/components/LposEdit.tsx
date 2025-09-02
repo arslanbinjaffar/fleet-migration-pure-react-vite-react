@@ -294,7 +294,8 @@ const LposEdit: React.FC = () => {
   const error = lpoError ? getErrorMessage(lpoError) : null;
   
   // Check if all required data is available for form initialization
-  const isDataReady = !isLoading && lpo && allFleets.length > 0 && customers.length > 0 && projects.length > 0;
+  // Fixed: Don't require arrays to have content, just that they exist (API calls completed)
+  const isDataReady = !isLoading && lpo && fleetsData && customersData && projectsData;
 
   // Form setup
   const form = useForm<UpdateLpoData>({
@@ -305,14 +306,21 @@ const LposEdit: React.FC = () => {
   const { control, handleSubmit, watch, setValue, reset, formState: { errors, isValid, isDirty } } = form;
   const watchedValues = watch();
 
-  // Initialize form when all required data is loaded - following legacy pattern
+  // Initialize form when LPO data is loaded - simplified like legacy pattern
   useEffect(() => {
-    if (isDataReady) {
+    if (lpo && !isLoading) {
+      // Extract fleet data from siteProjectFleets if available
+      const fleetIds = lpoResponse?.siteProjectFleets?.map(item => item.fleetId) || [];
+      const fleetHourlyRates = lpoResponse?.siteProjectFleets?.map(item => ({
+        fleetId: item.fleetId,
+        hourlyRate: item.fleet?.hourlyRate || 0,
+      })) || [];
+      
       // Ensure fleet data is properly structured like in legacy implementation
       const formData = {
         lpoId: lpo.lpoId,
-        fleetIds: lpo.fleetIds || [],
-        fleetHourlyRates: lpo.fleetHourlyRates || [],
+        fleetIds,
+        fleetHourlyRates,
         siteProjectId: lpo.siteProjectId || '',
         purpose: lpo.purpose || '',
         lpoStartDate: lpo.lpoStartDate || '',
@@ -333,11 +341,11 @@ const LposEdit: React.FC = () => {
         setSelectedProject(lpo.siteProject);
       } else if (lpo.siteProjectId && projects.length > 0) {
         // Find project from projects list if not included in LPO response
-        const project = projects.find(p => p.siteProjectId === lpo.siteProjectId);
+        const project = projects.find((p: SiteProject) => p.siteProjectId === lpo.siteProjectId);
         setSelectedProject(project || null);
       }
     }
-  }, [isDataReady, lpo, allFleets, customers, projects, reset]);
+  }, [lpo, lpoResponse, isLoading, projects, reset]);
 
   // Show error toast when API error occurs
   useEffect(() => {
@@ -349,9 +357,11 @@ const LposEdit: React.FC = () => {
   // Handle project selection - ensure projects are loaded
   useEffect(() => {
     if (watchedValues.siteProjectId && projects.length > 0) {
-      const project = projects.find(p => p.siteProjectId === watchedValues.siteProjectId);
+      const project = projects.find((p: SiteProject) => p.siteProjectId === watchedValues.siteProjectId);
       setSelectedProject(project || null);
       console.log('Selected project updated:', project);
+    } else if (!watchedValues.siteProjectId) {
+      setSelectedProject(null);
     }
   }, [watchedValues.siteProjectId, projects]);
 
@@ -412,7 +422,7 @@ const LposEdit: React.FC = () => {
   };
 
   // Show loading until ALL required data is available (following legacy pattern)
-  if (!isDataReady) {
+  if (isLoading || !lpo) {
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -509,24 +519,23 @@ const LposEdit: React.FC = () => {
                   Choose the fleets for this LPO and set their hourly rates
                 </p>
                 
-                {allFleets.length === 0 ? (
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      No fleets available for selection.
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <FleetSelection
-                    allFleets={allFleets}
-                    selectedFleetIds={watchedValues.fleetIds || []}
-                    fleetHourlyRates={watchedValues.fleetHourlyRates || []}
-                    onFleetSelect={handleFleetSelect}
-                    onHourlyRateChange={handleHourlyRateChange}
-                    disabled={!isEditable}
-                  />
-                )}
-              </div>
+                <FleetSelection
+                  allFleets={allFleets}
+                  selectedFleetIds={watchedValues.fleetIds || []}
+                  fleetHourlyRates={watchedValues.fleetHourlyRates || []}
+                  onFleetSelect={handleFleetSelect}
+                  onHourlyRateChange={handleHourlyRateChange}
+                  disabled={!isEditable}
+                />
+                {allFleets.length === 0 && (
+                   <Alert>
+                     <AlertCircle className="h-4 w-4" />
+                     <AlertDescription>
+                       No fleets available for selection.
+                     </AlertDescription>
+                   </Alert>
+                 )}
+               </div>
               
               {errors.fleetIds && (
                 <Alert variant="destructive">
@@ -568,13 +577,13 @@ const LposEdit: React.FC = () => {
                         </FormControl>
                         <SelectContent>
                           {projects.length > 0 ? (
-                            projects.map((project) => (
+                            projects.map((project: SiteProject) => (
                               <SelectItem key={project.siteProjectId} value={project.siteProjectId}>
-                                {project.projectName} - {project.mainClient}
+                                {project.projectName}
                               </SelectItem>
                             ))
                           ) : (
-                            <SelectItem value="" disabled>
+                            <SelectItem value="no-projects" disabled>
                               No projects available
                             </SelectItem>
                           )}
@@ -699,20 +708,32 @@ const LposEdit: React.FC = () => {
                       <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <Label className="text-sm font-medium">Project Name</Label>
-                            <p className="text-sm text-muted-foreground">{selectedProject.projectName}</p>
+                            <Label className="text-sm font-medium">Project Owner</Label>
+                            <p className="text-sm text-muted-foreground">{selectedProject.projectOwner || 'N/A'}</p>
                           </div>
                           <div>
-                            <Label className="text-sm font-medium">Main Client</Label>
-                            <p className="text-sm text-muted-foreground">{selectedProject.mainClient}</p>
+                            <Label className="text-sm font-medium">Main Contractor</Label>
+                            <p className="text-sm text-muted-foreground">{selectedProject.mainContractor || 'N/A'}</p>
                           </div>
                           <div>
-                            <Label className="text-sm font-medium">Location</Label>
-                            <p className="text-sm text-muted-foreground">{selectedProject.location}</p>
+                            <Label className="text-sm font-medium">Type</Label>
+                            <p className="text-sm text-muted-foreground">{selectedProject.typeOfProject || 'N/A'}</p>
                           </div>
                           <div>
-                            <Label className="text-sm font-medium">Status</Label>
-                            <Badge variant="outline">{selectedProject.status}</Badge>
+                            <Label className="text-sm font-medium">Zone</Label>
+                            <p className="text-sm text-muted-foreground">{selectedProject.zone || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <Label className="text-sm font-medium">Start Date</Label>
+                            <p className="text-sm text-muted-foreground">
+                              {selectedProject.startDate ? new Date(selectedProject.startDate).toLocaleDateString() : 'N/A'}
+                            </p>
+                          </div>
+                          <div>
+                            <Label className="text-sm font-medium">Expiry Date</Label>
+                            <p className="text-sm text-muted-foreground">
+                              {selectedProject.expiryDate ? new Date(selectedProject.expiryDate).toLocaleDateString() : 'N/A'}
+                            </p>
                           </div>
                         </div>
                       </CardContent>
@@ -760,7 +781,7 @@ const LposEdit: React.FC = () => {
                               </SelectItem>
                             ))
                           ) : (
-                            <SelectItem value="" disabled>
+                            <SelectItem value="no-customers" disabled>
                               No customers available
                             </SelectItem>
                           )}

@@ -12,6 +12,8 @@ import { WarehouseList, WarehouseCreate, WarehouseEdit, WarehouseManage } from "
 import { ModelList, ModelCreate, ModelEdit } from "../modules/inventory/model/components";
 import { CategoryList, CategoryCreate, CategoryEdit } from "../modules/inventory/category/components";
 import { BrandList, BrandCreate, BrandEdit } from "../modules/inventory/brand/components";
+import { FleetTypeList, FleetTypeCreate } from "../modules/fleet-type/components";
+import { SiteProjectList, SiteProjectCreate, SiteProjectView } from "../modules/site-project/components";
 
 // Fleet Components
 import FleetCreate from '@/modules/fleet/components/FleetCreate';
@@ -208,21 +210,45 @@ export const allRoutes: RouteConfig[] = [
   // Fleet Type Routes
   {
     url: "fleet-type",
-    component: <div>Fleet Type Component</div>, // Placeholder
+    component: <FleetTypeList />,
     module: "MRM",
     name: "FleetType",
     access: ["admin"],
     action: ["create", "read", "update", "delete"]
   },
+  {
+    url: "fleet-type/create",
+    component: <FleetTypeCreate />,
+    module: "MRM",
+    name: "FleetType",
+    access: ["admin"],
+    action: ["create"]
+  },
   
   // Site Project Routes
   {
     url: "site-project",
-    component: <div>Site Project Component</div>, // Placeholder
+    component: <SiteProjectList />,
     module: "MRM",
     name: "SiteProject",
     access: ["admin"],
     action: ["create", "read", "update", "delete"]
+  },
+  {
+    url: "site-project/create",
+    component: <SiteProjectCreate />,
+    module: "MRM",
+    name: "SiteProject",
+    access: ["admin"],
+    action: ["create"]
+  },
+  {
+    url: "site-project/view/:id",
+    component: <SiteProjectView />,
+    module: "MRM",
+    name: "SiteProject",
+    access: ["admin"],
+    action: ["read"]
   },
   
   // Jobs Routes

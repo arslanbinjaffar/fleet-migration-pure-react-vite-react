@@ -87,7 +87,7 @@ import { useModulePermissions } from '../../../contexts/PermissionContext';
 import LpoPdfView from './LpoPdfView';
 
 // PDF Generation utility
-const generatePDF = async (lpo: LPO, fleets: Fleet[]) => {
+const generatePDF = async (lpo: LPO, fleets: { fleetId: string; plateNumber: string; vehicleName: string; hourlyRate: number }[]) => {
   // Dynamic import for html2pdf to avoid SSR issues
   const html2pdf = (await import('html2pdf.js')).default;
   
@@ -156,7 +156,7 @@ const LposView: React.FC = () => {
   
   // Extract data from API response
   const lpo = lpoResponse?.lpo || null;
-  const fleets = lpoResponse?.fleets || [];
+  const fleets = lpoResponse?.siteProjectFleets || [];
   
   // Error handling
   const error = lpoError ? getErrorMessage(lpoError) : null;
@@ -185,7 +185,12 @@ const LposView: React.FC = () => {
     
     setIsGeneratingPDF(true);
     try {
-      await generatePDF(lpo, fleets);
+      await generatePDF(lpo, fleets.map(item => ({
+        fleetId: item.fleet.fleetId,
+        plateNumber: item.fleet.plateNumber,
+        vehicleName: item.fleet.vehicleName,
+        hourlyRate: item.fleet.hourlyRate
+      })));
       toast.success('PDF downloaded successfully');
     } catch (error) {
       toast.error('Failed to generate PDF');
@@ -265,8 +270,8 @@ const LposView: React.FC = () => {
   }
 
   const statusConfig = getStatusConfig(lpo.status);
-  const totalHourlyRate = calculateTotalHourlyRate(lpo.fleetHourlyRates);
-  const estimatedCost = calculateEstimatedCost(lpo.fleetHourlyRates, lpo.lpoStartDate, lpo.lpoEndDate);
+  const totalHourlyRate = calculateTotalHourlyRate(fleets.map(item => ({ fleetId: item.fleetId, hourlyRate: item.fleet.hourlyRate })));
+  const estimatedCost = calculateEstimatedCost(fleets.map(item => ({ fleetId: item.fleetId, hourlyRate: item.fleet.hourlyRate })), lpo.lpoStartDate, lpo.lpoEndDate);
   const duration = getDaysDifference(lpo.lpoStartDate, lpo.lpoEndDate) + 1;
 
   return (
@@ -377,7 +382,7 @@ const LposView: React.FC = () => {
               <Truck className="h-5 w-5 text-muted-foreground" />
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Fleets</p>
-                <p className="text-2xl font-bold">{lpo?.fleetIds?.length}</p>
+                <p className="text-2xl font-bold">{fleets?.length || 0}</p>
               </div>
             </div>
           </CardContent>
@@ -515,20 +520,20 @@ const LposView: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Project Name</label>
-                <p className="font-medium">{lpo.siteProject.projectName}</p>
+                <p className="font-medium">{lpo.siteProject.projectOwner}</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Main Client</label>
-                <p className="font-medium">{lpo.siteProject.mainClient}</p>
+                <p className="font-medium">{lpo.siteProject.mainContractor}</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Location</label>
-                <p className="font-medium">{lpo.siteProject.location}</p>
+                <p className="font-medium">{lpo.siteProject.zonalSite}</p>
               </div>
-              <div>
+              {/* <div>
                 <label className="text-sm font-medium text-muted-foreground">Project Status</label>
                 <Badge variant="outline">{lpo.siteProject.status}</Badge>
-              </div>
+              </div> */}
             </div>
             
             {lpo.siteProject.description && (
@@ -561,26 +566,25 @@ const LposView: React.FC = () => {
               <TableRow>
                 <TableHead>Vehicle</TableHead>
                 <TableHead>Plate Number</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
+                {/* <TableHead>Type</TableHead> */}
+                {/* <TableHead>Status</TableHead> */}
                 <TableHead className="text-right">Hourly Rate</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {fleets.map((fleet) => {
-                const hourlyRate = lpo.fleetHourlyRates?.find(r => r.fleetId === fleet.fleetId)?.hourlyRate || 0;
+              {fleets.map((item) => {
                 return (
-                  <TableRow key={fleet.fleetId}>
-                    <TableCell className="font-medium">{fleet.vehicleName}</TableCell>
-                    <TableCell>{fleet.plateNumber}</TableCell>
-                    <TableCell>{fleet.fleetType?.typeName || 'N/A'}</TableCell>
-                    <TableCell>
-                      <Badge variant={fleet.status === 'Available' ? 'default' : 'secondary'}>
-                        {fleet.status}
+                  <TableRow key={item.fleet.fleetId}>
+                    <TableCell className="font-medium">{item.fleet.vehicleName}</TableCell>
+                    <TableCell>{item.fleet.plateNumber}</TableCell>
+                    {/* <TableCell>{item.fleet.fleetType?.typeName || 'N/A'}</TableCell> */}
+                    {/* <TableCell>
+                      <Badge variant={item.fleet.status === 'Available' ? 'default' : 'secondary'}>
+                        {item.fleet.status}
                       </Badge>
-                    </TableCell>
+                    </TableCell> */}
                     <TableCell className="text-right font-medium">
-                      ${hourlyRate.toFixed(2)}
+                      ${item.fleet.hourlyRate.toFixed(2)}
                     </TableCell>
                   </TableRow>
                 );
@@ -644,8 +648,8 @@ const LposView: React.FC = () => {
           </div>
           <div>
             <strong>REGN# 
-              {fleets.map((fleet, index) => (
-                <span key={index}>({fleet.plateNumber})</span>
+              {fleets.map((item, index) => (
+                <span key={index}>({item.fleet.plateNumber})</span>
               ))}
             </strong>
           </div>
@@ -687,11 +691,10 @@ const LposView: React.FC = () => {
 
           <p>
             <strong>WHEREAS</strong> the First Party has agreed to hire,{' '}
-            {fleets.map((fleet, index) => {
-              const hourlyRate = lpo.fleetHourlyRates?.find(r => r.fleetId === fleet.fleetId)?.hourlyRate || 0;
+            {fleets.map((item, index) => {
               return (
                 <strong key={index}>
-                  {fleet.vehicleName}-{fleet.plateNumber}@{hourlyRate}/Hr{' '}
+                  {item.fleet.vehicleName}-{item.fleet.plateNumber}@{item.fleet.hourlyRate}/Hr{' '}
                 </strong>
               );
             })}

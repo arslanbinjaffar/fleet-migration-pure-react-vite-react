@@ -21,6 +21,19 @@ export const NavigationPaths = {
     EDIT: (id: string) => `fleet/edit/${id}`,
   },
 
+  // Fleet Type Management Module
+  FLEET_TYPE: {
+    LIST: 'fleet-type',
+    CREATE: 'fleet-type/create',
+  },
+
+  // Site Project Management Module
+  SITE_PROJECT: {
+    LIST: 'site-project',
+    CREATE: 'site-project/create',
+    VIEW: (id: string) => `site-project/view/${id}`,
+  },
+
   // Customer Management Module
   CUSTOMER: {
     LIST: 'customer',
