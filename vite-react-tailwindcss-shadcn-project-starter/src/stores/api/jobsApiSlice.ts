@@ -102,7 +102,7 @@ export const jobsApiSlice = apiSlice.injectEndpoints({
     // Assign manual technician to job
     assignManualTechnician: builder.mutation<JobApiResponse, { jobId: string; manualTechnician: ManualTechnician }>({
       query: ({ jobId, manualTechnician }) => ({
-        url: `/job/update/${jobId}`,
+        url: `/job/${jobId}/assignTechnicianCustom`,
         method: 'PUT',
         body: { manualTechnician },
       }),
