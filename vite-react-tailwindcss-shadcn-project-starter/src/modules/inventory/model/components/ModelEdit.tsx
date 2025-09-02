@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/form';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 
 // Icons
 import { ArrowLeft, Save, Loader2, Edit } from 'lucide-react';
@@ -26,7 +26,7 @@ import { ArrowLeft, Save, Loader2, Edit } from 'lucide-react';
 // API and Validation
 import {
   useGetSingleModelQuery,
-  usePutModelMutation,
+  useUpdateModelMutation,
 } from '@/stores/api/modelApiSlice';
 import { updateModelSchema, type UpdateModelData } from '../schemas/modelSchema';
 import {
@@ -40,7 +40,12 @@ import { formatModelForDisplay } from '../utils';
 import type { ModelFormData } from '../types';
 
 // Permission hook
-import { usePermissions } from '@/hooks/usePermissions';
+import {
+  EditButton,
+  ViewButton,
+  usePermissions,
+  PermissionModule,
+} from '@/components/permissions';
 
 interface ModelEditProps {
   className?: string;
@@ -69,7 +74,7 @@ const ModelEdit: React.FC<ModelEditProps> = ({ className }) => {
     skip: !modelId,
   });
   
-  const [putModel, { isLoading: isUpdating }] = usePutModelMutation();
+  const [putModel, { isLoading: isUpdating }] = useUpdateModelMutation();
   
   // Permissions
   const permissions = usePermissions();

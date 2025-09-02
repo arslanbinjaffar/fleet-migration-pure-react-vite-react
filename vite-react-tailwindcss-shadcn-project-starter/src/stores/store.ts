@@ -6,6 +6,9 @@ import { combineReducers } from '@reduxjs/toolkit';
 
 // Import API slice
 import { apiSlice } from './api/apiSlice';
+import { notificationApiSlice } from './api/notifications/notificationApiSlice';
+import { brandApiSlice } from './api/brandApiSlice';
+import { modelApiSlice } from './api/modelApiSlice';
 
 // Import reducers
 import userReducer from './slices/userSlice';
@@ -31,6 +34,9 @@ const persistConfig = {
 // Root reducer
 const rootReducer = combineReducers({
   [apiSlice.reducerPath]: apiSlice.reducer,
+  // [notificationApiSlice.reducerPath]: notificationApiSlice.reducer,
+  // [brandApiSlice.reducerPath]: brandApiSlice.reducer,
+  // [modelApiSlice.reducerPath]: modelApiSlice.reducer,
   user: userReducer,
   auth: authReducer,
   fleet: fleetReducer,
@@ -65,7 +71,7 @@ export const store = configureStore({
         ],
       },
     })
-    .concat(apiSlice.middleware),
+    .concat(apiSlice.middleware)
 });
 
 // Create persistor

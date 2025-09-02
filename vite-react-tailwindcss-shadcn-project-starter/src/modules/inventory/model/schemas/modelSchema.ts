@@ -75,13 +75,3 @@ export type BulkModelData = z.infer<typeof bulkModelSchema>;
 export type ModelImportData = z.infer<typeof modelImportSchema>;
 
 // Export all schemas
-export {
-  modelSchema,
-  createModelSchema,
-  updateModelSchema,
-  modelSearchSchema,
-  modelFilterSchema,
-  modelIdSchema,
-  bulkModelSchema,
-  modelImportSchema,
-};

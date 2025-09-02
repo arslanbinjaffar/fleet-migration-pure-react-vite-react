@@ -217,18 +217,18 @@ export const cleanCategoryData = (data: any) => {
 };
 
 // Export all utilities
-export {
-  formatCategoryForDisplay,
-  filterCategories,
-  sortCategories,
-  paginateCategories,
-  generateCategoryCSVData,
-  validateCategoryNameUniqueness,
-  generateCategoryOptions,
-  debounce,
-  formatTags,
-  validateCategoryForm,
-  searchCategoriesWithHighlight,
-  calculateCategoryStats,
-  cleanCategoryData,
-};
+// export {
+//   formatCategoryForDisplay,
+//   filterCategories,
+//   sortCategories,
+//   paginateCategories,
+//   generateCategoryCSVData,
+//   validateCategoryNameUniqueness,
+//   generateCategoryOptions,
+//   debounce,
+//   formatTags,
+//   validateCategoryForm,
+//   searchCategoriesWithHighlight,
+//   calculateCategoryStats,
+//   cleanCategoryData,
+// };

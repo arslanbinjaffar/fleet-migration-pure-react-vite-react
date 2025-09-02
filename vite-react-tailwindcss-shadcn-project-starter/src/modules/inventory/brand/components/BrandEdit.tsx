@@ -40,7 +40,12 @@ import { formatBrandForDisplay } from '../utils';
 import type { BrandFormData } from '../types';
 
 // Permission hook
-import { usePermissions } from '@/hooks/usePermissions';
+import {
+  EditButton,
+  ViewButton,
+  usePermissions,
+  PermissionModule,
+} from '@/components/permissions';
 
 interface BrandEditProps {
   className?: string;

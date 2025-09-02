@@ -144,17 +144,3 @@ export const cleanBrandData = (data: any) => {
     tags: data.tags?.filter((tag: string) => tag.trim()) || [],
   };
 };
-
-// Export all utilities
-export {
-  formatBrandForDisplay,
-  filterBrands,
-  sortBrands,
-  paginateBrands,
-  generateBrandCSVData,
-  validateBrandNameUniqueness,
-  generateBrandOptions,
-  debounce,
-  formatTags,
-  cleanBrandData,
-};

@@ -74,14 +74,3 @@ export type CategoryIdData = z.infer<typeof categoryIdSchema>;
 export type BulkCategoryData = z.infer<typeof bulkCategorySchema>;
 export type CategoryImportData = z.infer<typeof categoryImportSchema>;
 
-// Export all schemas
-export {
-  categorySchema,
-  createCategorySchema,
-  updateCategorySchema,
-  categorySearchSchema,
-  categoryFilterSchema,
-  categoryIdSchema,
-  bulkCategorySchema,
-  categoryImportSchema,
-};

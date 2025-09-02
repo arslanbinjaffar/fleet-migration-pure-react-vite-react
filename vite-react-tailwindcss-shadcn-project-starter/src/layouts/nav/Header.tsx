@@ -3,8 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { NavLink, useNavigate } from "react-router-dom";
 import { selectCurrentUser, logout } from "../../stores/slices/authSlice";
 import { useTheme } from "../../contexts/ThemeContext";
-import { FaBell, FaSun, FaMoon, FaRegUser, FaCog } from "react-icons/fa";
-import { Badge } from "../../components/ui/badge";
+import { FaSun, FaMoon, FaRegUser, FaCog } from "react-icons/fa";
 import { Button } from "../../components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
 import {
@@ -24,7 +23,8 @@ import {
 import { cn } from "../../lib/utils";
 import type { AuthUser } from "../../utils/role";
 import type { MenuItemConfig } from "../../config/menuConfig.tsx";
-import { toast } from "sonner"; // Add toast for notifications
+import { toast } from "sonner";
+import { NotificationDropdown } from "../../modules/notifications/components";
 
 interface HeaderProps {
   headerMenuItems?: MenuItemConfig[];
@@ -32,9 +32,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ headerMenuItems = [], onModuleChange }) => {
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [unreadCount] = useState(0); // Placeholder for notification count
   const [headerFix, setHeaderFix] = useState(false);
   
   const user = useSelector(selectCurrentUser) as AuthUser | null;
@@ -57,12 +55,7 @@ const Header: React.FC<HeaderProps> = ({ headerMenuItems = [], onModuleChange })
     navigate(`/${role}/${path}`);
   };
 
-  const handleNotificationToggle = (isOpen: boolean) => {
-    setShowNotifications(isOpen);
-    if (isOpen) {
-      console.log('Fetching notifications...');
-    }
-  };
+
 
   const handleLogout = () => {
     dispatch(logout());
@@ -113,40 +106,20 @@ const Header: React.FC<HeaderProps> = ({ headerMenuItems = [], onModuleChange })
               <p>Toggle Theme</p>
             </TooltipContent>
           </Tooltip>
-          <DropdownMenu open={showNotifications} onOpenChange={handleNotificationToggle}>
-            <DropdownMenuTrigger asChild>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="relative hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-lg"
-                  >
-                    <FaBell size={18} />
-                    {/* {unreadCount > 0 && (
-                      <Badge
-                        variant="destructive"
-                        className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs animate-pulse"
-                      >
-                        {unreadCount}
-                      </Badge>
-                    )} */}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Notifications</p>
-                </TooltipContent>
-              </Tooltip>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80 mt-2">
-              <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <div className="p-4 text-center text-muted-foreground">
-                {/* Replace with actual notification component */}
-                {/* <NotificationBlog /> */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <NotificationDropdown
+                  className="hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-lg"
+                  iconSize={18}
+                  dropdownAlign="end"
+                />
               </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Notifications</p>
+            </TooltipContent>
+          </Tooltip>
           <DropdownMenu open={showProfile} onOpenChange={setShowProfile}>
             <DropdownMenuTrigger asChild>
               <Button
@@ -200,7 +173,7 @@ const Header: React.FC<HeaderProps> = ({ headerMenuItems = [], onModuleChange })
                 }}
                 className="cursor-pointer"
               >
-                <FaBell className="mr-2 h-4 w-4" />
+                <FaCog className="mr-2 h-4 w-4" />
                 Notifications
               </DropdownMenuItem>
               <DropdownMenuItem

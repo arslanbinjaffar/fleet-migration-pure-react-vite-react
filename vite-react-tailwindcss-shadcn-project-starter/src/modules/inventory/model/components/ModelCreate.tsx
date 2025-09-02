@@ -16,7 +16,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 
 // Icons
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
@@ -31,7 +31,11 @@ import {
 } from '../constants';
 
 // Permission hook
-import { usePermissions } from '@/hooks/usePermissions';
+import {
+  CreateButton,
+  usePermissions,
+  PermissionModule,
+} from '@/components/permissions';
 
 interface ModelCreateProps {
   className?: string;

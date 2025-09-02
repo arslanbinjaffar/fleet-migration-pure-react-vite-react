@@ -36,7 +36,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 
 // Icons
 import {
@@ -76,7 +76,17 @@ import {
 import { createModelSchema, type CreateModelData } from '../schemas/modelSchema';
 
 // Permission hook
-import { usePermissions } from '@/hooks/usePermissions';
+import {
+  CreateButton,
+  EditButton,
+  DeleteButton,
+  ViewButton,
+  ExportButton,
+  ActionsDropdown,
+  BulkActionsDropdown,
+  usePermissions,
+  PermissionModule,
+} from '@/components/permissions';
 
 interface ModelListProps {
   className?: string;

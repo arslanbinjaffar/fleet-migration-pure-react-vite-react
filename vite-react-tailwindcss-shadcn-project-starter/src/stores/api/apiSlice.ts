@@ -23,7 +23,7 @@ export const apiSlice = createApi({
       return headers;
     },
   }),
-  tagTypes: ['User', 'Dashboard', 'HRM', 'MRM', 'Finance', 'GOM', 'Roles'],
+  tagTypes: ['User', 'Dashboard', 'HRM', 'MRM', 'Finance', 'GOM', 'Roles', 'Model','Notification', 'Brand'],
   endpoints: (builder) => ({
     // Example endpoint - you can add more as needed
     getUsers: builder.query<any[], void>({

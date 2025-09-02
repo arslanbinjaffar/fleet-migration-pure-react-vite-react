@@ -33,7 +33,11 @@ import {
 } from '../constants';
 
 // Permission hook
-import { usePermissions } from '@/hooks/usePermissions';
+import {
+  CreateButton,
+  usePermissions,
+  PermissionModule,
+} from '@/components/permissions';
 
 interface CategoryCreateProps {
   className?: string;

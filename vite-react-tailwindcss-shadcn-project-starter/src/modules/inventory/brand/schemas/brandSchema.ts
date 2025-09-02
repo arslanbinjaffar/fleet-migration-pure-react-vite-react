@@ -67,14 +67,3 @@ export type BrandSearchParams = z.infer<typeof brandSearchSchema>;
 export type BrandFilterData = z.infer<typeof brandFilterSchema>;
 export type BrandIdData = z.infer<typeof brandIdSchema>;
 export type BulkBrandData = z.infer<typeof bulkBrandSchema>;
-
-// Export all schemas
-export {
-  brandSchema,
-  createBrandSchema,
-  updateBrandSchema,
-  brandSearchSchema,
-  brandFilterSchema,
-  brandIdSchema,
-  bulkBrandSchema,
-};

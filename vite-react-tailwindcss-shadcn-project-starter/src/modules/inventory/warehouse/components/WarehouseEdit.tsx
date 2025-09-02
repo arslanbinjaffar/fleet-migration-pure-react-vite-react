@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 
 // Icons
 import { ArrowLeft, Save, Loader2, Eye } from 'lucide-react';
@@ -47,7 +47,12 @@ import { formatWarehouseForDisplay } from '../utils';
 import type { WarehouseFormData } from '../types';
 
 // Permission hook
-import { usePermissions } from '@/hooks/usePermissions';
+import {
+  EditButton,
+  ViewButton,
+  usePermissions,
+  PermissionModule,
+} from '@/components/permissions';
 
 interface WarehouseEditProps {
   className?: string;

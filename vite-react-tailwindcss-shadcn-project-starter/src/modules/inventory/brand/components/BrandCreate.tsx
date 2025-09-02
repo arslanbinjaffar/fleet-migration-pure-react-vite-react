@@ -31,7 +31,11 @@ import {
 } from '../constants';
 
 // Permission hook
-import { usePermissions } from '@/hooks/usePermissions';
+import {
+  CreateButton,
+  usePermissions,
+  PermissionModule,
+} from '@/components/permissions';
 
 interface BrandCreateProps {
   className?: string;

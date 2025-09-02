@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 
 // Icons
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
@@ -41,7 +41,11 @@ import {
 import type { WarehouseFormData } from '../types';
 
 // Permission hook
-import { usePermissions } from '@/hooks/usePermissions';
+import {
+  CreateButton,
+  usePermissions,
+  PermissionModule,
+} from '@/components/permissions';
 
 interface WarehouseCreateProps {
   className?: string;

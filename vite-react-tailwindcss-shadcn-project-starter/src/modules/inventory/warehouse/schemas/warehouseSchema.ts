@@ -156,14 +156,3 @@ export type WarehouseSearchParams = z.infer<typeof warehouseSearchSchema>;
 export type StockTransferItemData = z.infer<typeof stockTransferItemSchema>;
 export type StockTransferData = z.infer<typeof stockTransferSchema>;
 export type WarehouseFilterData = z.infer<typeof warehouseFilterSchema>;
-
-// Export all schemas
-export {
-  warehouseSchema,
-  createWarehouseSchema,
-  updateWarehouseSchema,
-  warehouseSearchSchema,
-  stockTransferItemSchema,
-  stockTransferSchema,
-  warehouseFilterSchema,
-};

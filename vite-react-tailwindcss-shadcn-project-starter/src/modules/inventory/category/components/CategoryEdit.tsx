@@ -40,7 +40,12 @@ import { formatCategoryForDisplay } from '../utils';
 import type { CategoryFormData } from '../types';
 
 // Permission hook
-import { usePermissions } from '@/hooks/usePermissions';
+import {
+  EditButton,
+  ViewButton,
+  usePermissions,
+  PermissionModule,
+} from '@/components/permissions';
 
 interface CategoryEditProps {
   className?: string;

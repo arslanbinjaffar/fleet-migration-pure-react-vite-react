@@ -65,7 +65,17 @@ import {
 } from '../constants';
 
 // Permission hook
-import { usePermissions } from '@/hooks/usePermissions';
+import {
+  CreateButton,
+  EditButton,
+  DeleteButton,
+  ViewButton,
+  ExportButton,
+  ActionsDropdown,
+  BulkActionsDropdown,
+  usePermissions,
+  PermissionModule,
+} from '@/components/permissions';
 
 interface BrandListProps {
   className?: string;

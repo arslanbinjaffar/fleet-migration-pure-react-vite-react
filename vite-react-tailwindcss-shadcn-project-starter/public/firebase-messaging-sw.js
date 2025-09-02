@@ -2,25 +2,40 @@
 importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js');
 
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: 'your-api-key',
-  authDomain: 'your-auth-domain',
-  projectId: 'your-project-id',
-  storageBucket: 'your-storage-bucket',
-  messagingSenderId: 'your-messaging-sender-id',
-  appId: 'your-app-id',
-  measurementId: 'your-measurement-id',
-};
+// Firebase configuration will be injected by the main app
+let firebaseConfig = null;
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
+// Listen for config message from main thread
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'FIREBASE_CONFIG') {
+    firebaseConfig = event.data.config;
+    initializeFirebase();
+  }
+});
 
-// Retrieve an instance of Firebase Messaging so that it can handle background messages
-const messaging = firebase.messaging();
+// Initialize Firebase when config is available
+function initializeFirebase() {
+  if (!firebaseConfig) {
+    console.error('[firebase-messaging-sw.js] Firebase config not available');
+    return;
+  }
+  
+  try {
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    
+    // Retrieve an instance of Firebase Messaging
+    const messaging = firebase.messaging();
+    
+    setupBackgroundMessageHandler(messaging);
+  } catch (error) {
+    console.error('[firebase-messaging-sw.js] Failed to initialize Firebase:', error);
+  }
+}
 
 // Handle background messages
-messaging.onBackgroundMessage((payload) => {
+function setupBackgroundMessageHandler(messaging) {
+  messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Received background message:', payload);
   
   // Customize notification here
@@ -45,8 +60,9 @@ messaging.onBackgroundMessage((payload) => {
     ]
   };
 
-  self.registration.showNotification(notificationTitle, notificationOptions);
-});
+    self.registration.showNotification(notificationTitle, notificationOptions);
+  });
+}
 
 // Handle notification click events
 self.addEventListener('notificationclick', (event) => {

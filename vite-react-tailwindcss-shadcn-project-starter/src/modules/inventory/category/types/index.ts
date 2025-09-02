@@ -84,15 +84,3 @@ export interface CategoryListItem {
 }
 
 // Export all types
-export type {
-  Category,
-  CategoryFormData,
-  CategoriesResponse,
-  CategoryResponse,
-  CategorySearchParams,
-  CategoryStats,
-  CategoryPermissions,
-  CategoryUIState,
-  CategoryFormState,
-  CategoryListItem,
-};

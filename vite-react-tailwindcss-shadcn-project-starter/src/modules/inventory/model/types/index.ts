@@ -82,16 +82,3 @@ export interface ModelListItem {
   canDelete: boolean;
 }
 
-// Export all types
-export type {
-  Model,
-  ModelFormData,
-  ModelsResponse,
-  ModelResponse,
-  ModelSearchParams,
-  ModelStats,
-  ModelPermissions,
-  ModelUIState,
-  ModelFormState,
-  ModelListItem,
-};

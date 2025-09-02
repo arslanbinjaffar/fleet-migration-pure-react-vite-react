@@ -28,7 +28,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 
 // Icons
 import {
@@ -72,7 +72,17 @@ import {
 } from '../constants';
 
 // Permission hook (assuming it exists)
-import { usePermissions } from '@/hooks/usePermissions';
+import {
+  CreateButton,
+  EditButton,
+  DeleteButton,
+  ViewButton,
+  ExportButton,
+  ActionsDropdown,
+  BulkActionsDropdown,
+  usePermissions,
+  PermissionModule,
+} from '@/components/permissions';
 
 interface WarehouseListProps {
   className?: string;

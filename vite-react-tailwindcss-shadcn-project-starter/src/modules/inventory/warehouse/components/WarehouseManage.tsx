@@ -34,7 +34,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 
 // Icons
 import {
@@ -68,7 +68,11 @@ import {
 } from '../constants';
 
 // Permission hook
-import { usePermissions } from '@/hooks/usePermissions';
+import {
+  ManageButton,
+  usePermissions,
+  PermissionModule,
+} from '@/components/permissions';
 
 // Types
 interface ProductTransferItem {
